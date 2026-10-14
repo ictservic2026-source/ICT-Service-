@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
@@ -13,7 +13,7 @@ import { useServices, useSession } from '@/hooks';
 /** กัน open-redirect: อนุญาตเฉพาะ path ภายในเว็บ */
 function safeNext(n: string | null) { return n && n.startsWith('/') && !n.startsWith('//') ? n : null; }
 
-export default function LoginPage() {
+function LoginForm() {
   const svc = useServices();
   const { user, setUser } = useSession();
   const router = useRouter();
@@ -74,5 +74,14 @@ export default function LoginPage() {
         </div>
       )}
     </AuthShell>
+  );
+}
+
+/** useSearchParams() ต้องอยู่ใน <Suspense> ไม่เช่นนั้น next build จะล้มตอน prerender หน้า /login */
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
