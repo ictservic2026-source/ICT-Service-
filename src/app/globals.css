@@ -1,0 +1,157 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* สไตล์ A — Enterprise Modern โทนฟ้าอ่อนสีประจำบริษัท: การ์ดขาวบนพื้นฟ้าอ่อน ไซด์บาร์สว่าง เส้นขอบบาง ไม่มีเงา */
+  --bg: #f4faff;
+  --surface: #ffffff;
+  --surface-2: #f1f8ff;
+  --surface-3: #e6f2fc;
+  --side: #edf6ff;
+  --line: #dcebf8;
+  --line-strong: #c3dcf2;
+  --ink: #0f2a3f;
+  --sub: #4f6b80;
+  --mute: #86a0b3;
+  --brand: #1e90e8;
+  --brand-d: #0f6fc0;
+  --brand-pale: #e8f4ff;
+  --brand-line: #c6e3fb;
+  --on-brand: #ffffff;
+  --navy: #0b3a5c;
+  --navy-2: #4aa3e8;
+  --ok: #047857;  --ok-bg: #d1fae5;  --ok-fg: #065f46;
+  --warn: #b45309; --warn-bg: #fef3c7; --warn-fg: #92400e;
+  --err: #dc2626; --err-bg: #fee2e2; --err-fg: #991b1b;
+  --blue-bg: #dbeafe;   --blue-fg: #1e40af;
+  --purple-bg: #ede9fe; --purple-fg: #5b21b6;
+  --orange-bg: #ffedd5; --orange-fg: #9a3412;
+  --cyan-bg: #cffafe;   --cyan-fg: #155e75;
+  --teal-bg: #ccfbf1;   --teal-fg: #115e59;
+  --slate-bg: #e2e8f0;  --slate-fg: #334155;
+  --shadow-sm: none;
+  --shadow-md: 0 4px 16px rgb(20 26 51 / .08);
+  --shadow-lg: 0 20px 50px rgb(20 26 51 / .18);
+}
+.dark {
+  --bg: #0a1822;
+  --surface: #0f2230;
+  --surface-2: #14293a;
+  --surface-3: #1a3246;
+  --side: #0c1d2a;
+  --line: #20384c;
+  --line-strong: #2e4d66;
+  --ink: #e6f1f9;
+  --sub: #9db8cb;
+  --mute: #6d8ca2;
+  --brand: #5bc0f0;
+  --brand-d: #8ad3f6;
+  --brand-pale: #123249;
+  --brand-line: #1e5273;
+  --on-brand: #06202f;
+  --ok: #34d399;  --ok-bg: #0f2e22;  --ok-fg: #6ee7b7;
+  --warn: #fbbf24; --warn-bg: #33250a; --warn-fg: #fcd34d;
+  --err: #f87171; --err-bg: #3a1414; --err-fg: #fca5a5;
+  --blue-bg: #14264d;   --blue-fg: #93c5fd;
+  --purple-bg: #261a4d; --purple-fg: #c4b5fd;
+  --orange-bg: #3a1f0d; --orange-fg: #fdba74;
+  --cyan-bg: #0c2f3a;   --cyan-fg: #67e8f9;
+  --teal-bg: #0b2f2c;   --teal-fg: #5eead4;
+  --slate-bg: #262d45;  --slate-fg: #cbd5e1;
+  --shadow-md: 0 4px 16px rgb(0 0 0 / .4);
+  --shadow-lg: 0 20px 50px rgb(0 0 0 / .6);
+}
+
+/* มุมโค้งแบบ Enterprise (เล็กกว่าค่าเริ่มต้นของ Tailwind) */
+@theme {
+  --radius-lg: 0.4375rem;
+  --radius-xl: 0.5rem;
+  --radius-2xl: 0.625rem;
+  --radius-3xl: 0.75rem;
+}
+
+@theme inline {
+  --font-sans: var(--font-plex-th), "IBM Plex Sans Thai", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-num: var(--font-plex), "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-sub: var(--sub);
+  --color-mute: var(--mute);
+  --color-brand: var(--brand);
+  --color-brand-d: var(--brand-d);
+  --color-brand-pale: var(--brand-pale);
+  --color-brand-line: var(--brand-line);
+  --color-side: var(--side);
+  --color-on-brand: var(--on-brand);
+  --color-navy: var(--navy);
+  --color-navy-2: var(--navy-2);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-err: var(--err);
+  --shadow-card: var(--shadow-sm);
+  --shadow-pop: var(--shadow-md);
+  --shadow-modal: var(--shadow-lg);
+}
+
+html { color-scheme: light; }
+html.dark { color-scheme: dark; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-plex-th), "IBM Plex Sans Thai", ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+::selection { background: var(--brand); color: var(--on-brand); }
+.num { font-family: var(--font-plex), "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+
+/* tone helpers ใช้กับ Badge / chip */
+.tone-blue { background: var(--blue-bg); color: var(--blue-fg); }
+.tone-amber { background: var(--warn-bg); color: var(--warn-fg); }
+.tone-purple { background: var(--purple-bg); color: var(--purple-fg); }
+.tone-orange { background: var(--orange-bg); color: var(--orange-fg); }
+.tone-cyan { background: var(--cyan-bg); color: var(--cyan-fg); }
+.tone-teal { background: var(--teal-bg); color: var(--teal-fg); }
+.tone-green { background: var(--ok-bg); color: var(--ok-fg); }
+.tone-red { background: var(--err-bg); color: var(--err-fg); }
+.tone-slate { background: var(--slate-bg); color: var(--slate-fg); }
+.tone-brand { background: var(--brand-pale); color: var(--brand-d); }
+
+/* focus ที่มองเห็นชัด (a11y) */
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+button, [role="button"], a { -webkit-tap-highlight-color: transparent; }
+
+/* scrollbar เบาๆ */
+* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+
+@keyframes ict-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes ict-pop { from { opacity: 0; transform: translateY(8px) scale(.98) } to { opacity: 1; transform: none } }
+@keyframes ict-slide-left { from { transform: translateX(100%) } to { transform: none } }
+@keyframes ict-spin { to { transform: rotate(360deg) } }
+@keyframes ict-shimmer { 100% { transform: translateX(100%) } }
+.anim-fade { animation: ict-fade .15s ease-out; }
+.anim-pop { animation: ict-pop .18s ease-out; }
+.anim-slide { animation: ict-slide-left .22s ease-out; }
+.anim-spin { animation: ict-spin .8s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .anim-fade, .anim-pop, .anim-slide, .anim-spin { animation: none; }
+}
+
+/* ตารางข้อมูลแบบ responsive: ปุ่มเลื่อนแนวนอนบนมือถือ */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* print (Report) */
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+}
+
+/* กัน grid item ขยายเกิน viewport เมื่อมีตารางกว้างอยู่ข้างใน (ตารางเลื่อนแนวนอนภายใน Card แทน) */
+@layer base {
+  .grid > * { min-width: 0; }
+}
