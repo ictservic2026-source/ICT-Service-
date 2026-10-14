@@ -1,54 +1,87 @@
 'use client';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { BarChart3, ClipboardList, Clock, FlaskConical, LogIn, Mail, ShieldCheck, Wrench } from 'lucide-react';
-import { PublicShell } from '@/components/layout/PublicShell';
-import { useServices } from '@/hooks';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Eye, EyeOff, LogIn } from 'lucide-react';
+import { AuthShell } from '@/components/layout/AuthShell';
+import { Button } from '@/components/ui/Button';
+import { Field, Input } from '@/components/ui/Field';
+import { ROLE_LABEL, ROLE_PORTAL } from '@/lib/constants';
+import { DEMO_PASSWORD } from '@/lib/mock/users';
+import { useServices, useSession } from '@/hooks';
 
-export default function Home() {
-  const s = useServices();
+/** กัน open-redirect: อนุญาตเฉพาะ path ภายในเว็บ */
+function safeNext(n: string | null) { return n && n.startsWith('/') && !n.startsWith('//') ? n : null; }
+
+function LoginForm() {
+  const svc = useServices();
+  const { user, setUser } = useSession();
+  const router = useRouter();
+  const next = safeNext(useSearchParams().get('next'));
+  const [email, setEmail] = useState('');
+  const [pw, setPw] = useState('');
+  const [show, setShow] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  useEffect(() => { if (user) router.replace(next || ROLE_PORTAL[user.role]); }, [user, next, router]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!svc) return;
+    setMsg(''); setBusy(true);
+    try {
+      const u = await svc.auth.signIn(email.trim(), pw);
+      setUser(u);
+      router.replace(next || ROLE_PORTAL[u.role]);
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : 'ไม่สามารถเข้าสู่ระบบได้');
+      setBusy(false);
+    }
+  }
+  async function quick(em: string) {
+    if (!svc) return;
+    setBusy(true);
+    try { const u = await svc.auth.signIn(em, DEMO_PASSWORD); setUser(u); router.replace(next || ROLE_PORTAL[u.role]); } catch (err) { setMsg(String(err)); setBusy(false); }
+  }
+
   return (
-    <PublicShell wide right={<Link href="/login" className="hidden items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-sub hover:bg-surface-3 hover:text-ink sm:inline-flex"><LogIn className="size-4" />เจ้าหน้าที่</Link>}>
-      <section className="bg-gradient-to-br from-navy to-navy-2 px-5 pt-14 pb-20 text-center">
-        <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1 text-xs text-slate-200"><Wrench className="size-3.5" />ICT Service / Repair Request System</p>
-        <h1 className="text-3xl font-semibold text-white sm:text-4xl">แจ้งปัญหาการใช้งาน IT</h1>
-        <p className="mx-auto mt-3 max-w-xl text-base text-slate-300">กรอกข้อมูลให้ครบถ้วน ทีม ICT จะติดต่อกลับภายใน 1 วันทำการ</p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2.5 text-[13px] text-slate-300">
-          {[[Clock, 'ตอบกลับภายใน 1 วัน'], [Mail, 'ได้รับอีเมลยืนยันทันที'], [ShieldCheck, 'ข้อมูลปลอดภัย']].map(([I, t]) => {
-            const Icon = I as typeof Clock;
-            return <span key={t as string} className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1"><Icon className="size-3.5" />{t as string}</span>;
-          })}
+    <AuthShell title="เข้าสู่ระบบเจ้าหน้าที่ IT" subtitle="สำหรับ ICO · ITL · IT Manager"
+      footer={<Link href="/" className="hover:text-white">← กลับหน้าแรก</Link>}>
+      <form onSubmit={submit} className="space-y-4" noValidate>
+        <Field label="อีเมล" htmlFor="email"><Input id="email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@nissei.co.th" required /></Field>
+        <Field label="รหัสผ่าน" htmlFor="password">
+          <div className="relative">
+            <Input id="password" type={show ? 'text' : 'password'} autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} required className="pr-11" />
+            <button type="button" onClick={() => setShow((s) => !s)} aria-label={show ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'} className="absolute top-1/2 right-3 -translate-y-1/2 text-mute hover:text-ink">{show ? <EyeOff className="size-5" /> : <Eye className="size-5" />}</button>
+          </div>
+        </Field>
+        {msg && <p role="alert" data-testid="login-error" className="rounded-lg bg-[var(--err-bg)] px-3 py-2 text-sm text-[var(--err-fg)]">{msg}</p>}
+        <Button type="submit" block size="lg" loading={busy} disabled={!svc}><LogIn className="size-5" />เข้าสู่ระบบ</Button>
+        <p className="text-center text-sm"><Link href="/forgot-password" className="text-brand-d hover:underline">ลืมรหัสผ่าน?</Link></p>
+      </form>
+      {svc?.source === 'mock' && (
+        <div className="mt-6 border-t border-line pt-4" data-testid="quick-login">
+          <p className="mb-2 text-xs font-medium text-sub">โหมดทดลอง — เข้าสู่ระบบด่วน (รหัสผ่าน {DEMO_PASSWORD})</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {svc.auth.demoAccounts?.().map((a) => (
+              <button key={a.id} type="button" disabled={busy} onClick={() => quick(a.email)} data-testid={`quick-${a.email.split('@')[0]}`}
+                className="rounded-xl border border-line bg-surface-2 px-3 py-2 text-left text-sm transition hover:border-brand hover:bg-brand-pale disabled:opacity-50">
+                <span className="block font-medium">{a.display_name}</span><span className="text-xs text-sub">{ROLE_LABEL[a.role]} · {a.email}</span>
+              </button>
+            ))}
+          </div>
         </div>
-        <Link href="/request" className="mt-8 inline-flex h-12 items-center gap-2 rounded-xl bg-brand px-7 text-[15px] font-semibold text-on-brand shadow-pop transition hover:brightness-110">
-          <ClipboardList className="size-5" />แจ้งปัญหา / ขอรับบริการ
-        </Link>
-      </section>
-
-      <section className="mx-auto -mt-10 grid max-w-5xl gap-4 px-4 pb-12 sm:grid-cols-2 sm:px-8 lg:grid-cols-3">
-        <Card href="/login" icon={<LogIn />} title="เจ้าหน้าที่ ICT / ITL / IT Manager" text="เข้าสู่ระบบเพื่อรับงาน บันทึกผล อนุมัติ และปิดงาน" />
-        <Card href="/dashboard" icon={<BarChart3 />} title="Dashboard & รายงาน" text="ภาพรวมงาน ค่าใช้จ่าย ความพึงพอใจ และส่งออก Excel" />
-        {s?.source === 'mock' && <Card href="/demo" icon={<FlaskConical />} title="ศูนย์ทดสอบ (Demo Hub)" text="สลับบทบาท ดูอีเมลจำลอง ทดสอบ workflow ทุกเส้นทาง" accent />}
-      </section>
-
-      <section className="mx-auto max-w-5xl px-4 pb-16 sm:px-8">
-        <h2 className="mb-4 text-center text-sm font-semibold tracking-wide text-sub uppercase">ขั้นตอนการทำงาน</h2>
-        <ol className="grid gap-3 sm:grid-cols-5">
-          {['ผู้แจ้งส่งคำขอ', 'หัวหน้างานอนุมัติ (ลิงก์ในอีเมล)', 'ICO ดำเนินการ', 'ITL ตรวจ → IT Manager อนุมัติ', 'ปิดงาน + ประเมินความพึงพอใจ'].map((t, i) => (
-            <li key={t} className="rounded-xl border border-line bg-surface p-4 text-center text-sm">
-              <span className="num mx-auto mb-2 flex size-8 items-center justify-center rounded-full bg-brand-pale font-semibold text-brand-d">{i + 1}</span>{t}
-            </li>
-          ))}
-        </ol>
-      </section>
-    </PublicShell>
+      )}
+    </AuthShell>
   );
 }
 
-function Card({ href, icon, title, text, accent }: { href: string; icon: React.ReactNode; title: string; text: string; accent?: boolean }) {
+/** useSearchParams() ต้องอยู่ใน <Suspense> ไม่เช่นนั้น next build จะล้มตอน prerender หน้า /login */
+export default function LoginPage() {
   return (
-    <Link href={href} className={`group rounded-2xl border bg-surface p-5 shadow-card transition hover:-translate-y-0.5 hover:shadow-pop ${accent ? 'border-warn/50' : 'border-line'}`}>
-      <span className="mb-3 flex size-10 items-center justify-center rounded-xl bg-brand-pale text-brand-d [&>svg]:size-5">{icon}</span>
-      <h3 className="font-semibold text-ink group-hover:text-brand-d">{title}</h3>
-      <p className="mt-1 text-sm text-sub">{text}</p>
-    </Link>
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
