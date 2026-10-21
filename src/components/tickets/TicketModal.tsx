@@ -5,7 +5,7 @@
  * ปุ่มดำเนินการขึ้นกับ role + สถานะ (ดู workflow/machine.ts → availableActions)
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowLeftRight, Check, Copy, CornerUpLeft, Link2, Save, Send, Undo2, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowLeftRight, Check, ChevronDown, CircleAlert, Copy, CornerUpLeft, Link2, Save, Send, Undo2, XCircle } from 'lucide-react';
 import type { CloseResult, CommentRead, Role, Ticket, TicketLog } from '@/types';
 import { CLOSE_RESULTS } from '@/lib/constants';
 import { fmtBaht, fmtDate, fmtDateTime, toArray } from '@/lib/utils/format';
@@ -25,7 +25,7 @@ import { LogThread, type SendInput } from './LogThread';
 import { readReceipts, unreadNotifications } from '@/lib/notifications';
 import { SurveyBody } from './SurveyDetail';
 import { WorkStatusBar } from './WorkStatus';
-import { WorkForm, WorkView, toWorkInput, workStateFrom, type WorkFormState } from './WorkForm';
+import { WorkForm, WorkView, toWorkInput, workMissing, workStateFrom, workSummary, type WorkFormState } from './WorkForm';
 
 type Tab = 'req' | 'work' | 'results' | 'log';
 
@@ -40,6 +40,8 @@ export function TicketModal({ ticketNo, portal, onClose, initialTab }: {
   const [busy, setBusy] = useState(false);
   const [reads, setReads] = useState<CommentRead[]>([]);
   const [decision, setDecision] = useState('');
+  /** แผงลิงก์อนุมัติ/ประเมินที่เปิดอยู่ — ซ่อนไว้เป็นค่าเริ่มต้น กันกดส่งผิดคน */
+  const [openFU, setOpenFU] = useState<string | null>(null);
   const [form, setForm] = useState<WorkFormState | null>(null);
   const [formErr, setFormErr] = useState<Partial<Record<keyof WorkFormState, string>>>({});
   const [close, setClose] = useState({ summary: '', result: '' as CloseResult | '', finish: new Date().toISOString().slice(0, 10) });
@@ -57,7 +59,7 @@ export function TicketModal({ ticketNo, portal, onClose, initialTab }: {
   // ฟอร์มงานเริ่มต้นจากข้อมูลที่บันทึกไว้ — โหลดใหม่เฉพาะเมื่อเปลี่ยนตั๋ว/มี service เปลี่ยน
   const svcStamp = svc?.updated_at ?? '';
   useEffect(() => { setForm(workStateFrom(svc, me, ticket?.asset_id)); setFormErr({}); setDecision(''); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [ticketNo, svcStamp, me]);
-  useEffect(() => { setTab(initialTab ?? 'req'); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [ticketNo]);
+  useEffect(() => { setOpenFU(null); setTab(initialTab ?? 'req'); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [ticketNo]);
 
   // read receipts: โหลดและทำเครื่องหมาย "อ่านแล้ว" เมื่อเปิดแท็บประวัติ
   const logIds = logs.map((l) => l.id).join(',');
@@ -116,6 +118,16 @@ export function TicketModal({ ticketNo, portal, onClose, initialTab }: {
   ];
   const copy = (text: string, ok: string) => { navigator.clipboard?.writeText(text).then(() => toast.success(ok)).catch(() => toast.info(text)); };
 
+  /** เลื่อนไปที่ช่องในฟอร์มแล้ววางเคอร์เซอร์ (รอให้แท็บงานแสดงก่อน) */
+  function jumpTo(id: string) {
+    setTab('work');
+    window.setTimeout(() => {
+      const el = document.getElementById(id) as HTMLInputElement | null;
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el?.focus({ preventScroll: true });
+    }, 60);
+  }
+
   async function run(fn: () => Promise<ActionResult>, ok: string, closeAfter = true) {
     setBusy(true);
     try {
@@ -138,7 +150,12 @@ export function TicketModal({ ticketNo, portal, onClose, initialTab }: {
     if (!form.action_detail.trim()) e.action_detail = 'กรุณาระบุการให้บริการ';
     if (form.repair_cost && (!Number.isFinite(Number(form.repair_cost)) || Number(form.repair_cost) < 0)) e.repair_cost = 'ค่าใช้จ่ายไม่ถูกต้อง';
     setFormErr(e);
-    if (Object.keys(e).length) { setTab('work'); toast.error(Object.values(e)[0]!); return false; }
+    if (Object.keys(e).length) {
+      setTab('work'); toast.error(Object.values(e)[0]!);
+      const first = workMissing(form)[0];
+      if (first) jumpTo(first.id);
+      return false;
+    }
     return true;
   }
 
@@ -186,6 +203,19 @@ export function TicketModal({ ticketNo, portal, onClose, initialTab }: {
         <Textarea value={decision} onChange={(e) => setDecision(e.target.value)} rows={2} maxLength={1000} data-testid="decision-comment" aria-label="ความเห็นประกอบการพิจารณา"
           placeholder={portal === 'ITM' ? 'ความเห็น IT Manager (จำเป็นเมื่อตีกลับ/ยกเลิก)…' : 'ความเห็นหัวหน้า ICO (จำเป็นเมื่อตีกลับ)…'} />
       )}
+      {formEditable && form && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[13px]" data-testid="work-summary" aria-live="polite">
+          <span className="text-sub">สรุปที่จะบันทึก:</span>
+          {workSummary(form).map((x) => <span key={x} className="rounded-full bg-surface px-2.5 py-0.5 text-ink ring-1 ring-line">{x}</span>)}
+          {workMissing(form).length > 0
+            ? workMissing(form).map((m) => (
+              <button key={m.id} type="button" onClick={() => jumpTo(m.id)} data-testid={`missing-${m.id}`}
+                className="inline-flex items-center gap-1 rounded-full bg-[var(--err-bg)] px-2.5 py-0.5 font-medium text-[var(--err-fg)] hover:underline">
+                <CircleAlert className="size-3.5" aria-hidden />ยังไม่ได้กรอก: {m.label}
+              </button>))
+            : <span className="inline-flex items-center gap-1 font-medium text-ok"><Check className="size-3.5" aria-hidden />กรอกช่องบังคับครบแล้ว</span>}
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>ปิดหน้าต่าง</Button>
         {portal === 'ICO' && icoEdit && <>
@@ -222,19 +252,30 @@ export function TicketModal({ ticketNo, portal, onClose, initialTab }: {
           {A.isDirectItl && <Banner tone="info" icon={<Link2 className="size-4" />} testId="banner-direct"><b>งาน Direct ITL</b> — ICO ส่งต่อให้ ITL ดำเนินการโดยตรง ICO ไม่ต้องบันทึกรายละเอียดงาน (ปิดงานได้หลัง ITM อนุมัติ)</Banner>}
           {svc && (svc.repair_cost ?? 0) > 0 && <Banner tone="info" testId="banner-cost">ค่าใช้จ่ายรวมของงานนี้ <b className="num">{fmtBaht(svc.repair_cost)}</b> · ผู้รับผิดชอบ {svc.work_owner}</Banner>}
           {portal === 'ICO' && icoEdit && ticket.status === 'ICO_WORK' && !bounced && <></>}
-          {followUps.map((f) => (
-            <div key={f.key} className="rounded-xl border border-[var(--warn)]/40 bg-[var(--warn-bg)] p-3 text-sm" data-testid={`followup-${f.key}`}>
-              <p className="font-semibold text-[var(--warn-fg)]">{f.title}</p>
-              <p className="mt-0.5 text-xs text-sub">ส่งถึง {f.to} · {f.note}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <code className="min-w-0 flex-1 truncate rounded bg-surface px-2 py-1 text-xs">{f.url}</code>
-                <Button size="sm" variant="secondary" data-testid={`copy-${f.key}`} onClick={() => copy(f.url, 'คัดลอกลิงก์แล้ว')}><Copy className="size-4" />คัดลอกลิงก์</Button>
-                <Button size="sm" variant="secondary" data-testid={`copy-${f.key}-msg`} onClick={() => copy(f.msg, 'คัดลอกข้อความพร้อมลิงก์แล้ว')}><Copy className="size-4" />คัดลอกข้อความ</Button>
-                <a href={`https://line.me/R/share?text=${encodeURIComponent(f.msg)}`} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="secondary" data-testid={`line-${f.key}`}>ส่งทาง LINE</Button></a>
-                <a href={`mailto:${f.to}?subject=${encodeURIComponent(f.subject)}&body=${encodeURIComponent(f.msg)}`}><Button size="sm" variant="ghost">อีเมล</Button></a>
+          {followUps.map((f) => {
+            const open = openFU === f.key;
+            return (
+              <div key={f.key} className="rounded-xl border border-[var(--warn)]/40 bg-[var(--warn-bg)] px-3 py-2.5 text-sm" data-testid={`followup-${f.key}`}>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <p className="font-semibold text-[var(--warn-fg)]">{f.title}</p>
+                  <button type="button" onClick={() => setOpenFU(open ? null : f.key)} aria-expanded={open} data-testid={`show-${f.key}`}
+                    className="ml-auto inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[13px] font-medium text-[var(--warn-fg)] hover:bg-surface/60">
+                    {open ? 'ซ่อนลิงก์' : 'แสดงลิงก์'}<ChevronDown className={`size-4 transition ${open ? 'rotate-180' : ''}`} aria-hidden />
+                  </button>
+                </div>
+                {open && <>
+                  <p className="mt-1 text-xs text-sub">ส่งถึง <b className="text-ink">{f.to}</b> เท่านั้น · {f.note}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <code className="min-w-0 flex-1 truncate rounded bg-surface px-2 py-1 text-xs">{f.url}</code>
+                    <Button size="sm" variant="secondary" data-testid={`copy-${f.key}`} onClick={() => copy(f.url, 'คัดลอกลิงก์แล้ว')}><Copy className="size-4" />คัดลอกลิงก์</Button>
+                    <Button size="sm" variant="secondary" data-testid={`copy-${f.key}-msg`} onClick={() => copy(f.msg, 'คัดลอกข้อความพร้อมลิงก์แล้ว')}><Copy className="size-4" />คัดลอกข้อความ</Button>
+                    <a href={`https://line.me/R/share?text=${encodeURIComponent(f.msg)}`} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="secondary" data-testid={`line-${f.key}`}>ส่งทาง LINE</Button></a>
+                    <a href={`mailto:${f.to}?subject=${encodeURIComponent(f.subject)}&body=${encodeURIComponent(f.msg)}`}><Button size="sm" variant="ghost">อีเมล</Button></a>
+                  </div>
+                </>}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <Tabs className="mt-4" value={tab} onChange={setTab} tabs={[

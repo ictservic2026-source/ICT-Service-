@@ -1,5 +1,7 @@
 'use client';
 import clsx from 'clsx';
+import { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import type { JobCategory, Priority, TicketService } from '@/types';
 import type { WorkInput } from '@/lib/workflow/machine';
 import { JOB_CATEGORIES, PRIORITIES } from '@/lib/constants';
@@ -49,46 +51,102 @@ export function toWorkInput(s: WorkFormState): WorkInput {
 /** ฟอร์มบันทึกงาน (ICO / Direct ITL) — ฟิลด์ตามฟอร์มเดิมใน admin-ico.js */
 export function WorkForm({ value, onChange, errors, requesterAsset }: { value: WorkFormState; onChange: (v: WorkFormState) => void; errors?: Partial<Record<keyof WorkFormState, string>>; requesterAsset?: string | null }) {
   const set = <K extends keyof WorkFormState>(k: K, v: WorkFormState[K]) => onChange({ ...value, [k]: v });
+  const extraCount = [value.spare_parts_detail, value.recommendations, value.additional_notes].filter((x) => x.trim()).length + (value.files.length ? 1 : 0);
+  const [moreOpen, setMoreOpen] = useState(extraCount > 0);
   return (
-    <div className="grid gap-4 sm:grid-cols-2" data-testid="work-form">
-      <Field label="เจ้าหน้าที่ผู้ดำเนินการ" required htmlFor="wf-staff" error={errors?.staff_name}>
-        <Input id="wf-staff" data-testid="wf-staff" value={value.staff_name} readOnly className="bg-surface-3" />
-      </Field>
-      <Field label="วันที่รับงาน" htmlFor="wf-recv"><Input id="wf-recv" type="date" value={value.received_date} onChange={(e) => set('received_date', e.target.value)} /></Field>
-      <Field label="ประเภทงาน" htmlFor="wf-cat">
-        <Select id="wf-cat" data-testid="wf-cat" value={value.job_category} onChange={(e) => set('job_category', e.target.value as JobCategory | '')}>
-          <option value="">— เลือก —</option>
-          {JOB_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-        </Select>
-      </Field>
-      <Field label={<>รหัสทรัพย์สิน (Asset) <span className="text-xs font-normal text-mute">ไม่บังคับ</span></>} htmlFor="wf-asset" error={errors?.asset_id}
-        hint={requesterAsset && requesterAsset.toUpperCase() !== value.asset_id ? `ผู้แจ้งระบุ: ${requesterAsset}` : 'ดูจากสติ๊กเกอร์ทรัพย์สินบนเครื่อง'}>
-        <Input id="wf-asset" data-testid="wf-asset" value={value.asset_id} maxLength={60} autoComplete="off" spellCheck={false}
-          className="num uppercase" placeholder="เช่น ICT-NB-0123" invalid={!!errors?.asset_id}
-          onChange={(e) => set('asset_id', e.target.value.toUpperCase())} />
-      </Field>
-      <Field label="ความเร่งด่วน">
-        <div className="flex gap-2" role="radiogroup" aria-label="ความเร่งด่วน">
-          {PRIORITIES.map((p) => (
-            <label key={p.value} className={clsx('flex flex-1 cursor-pointer items-center justify-center rounded-xl border px-3 py-2.5 text-sm font-medium transition',
-              value.priority === p.value ? (p.value === 'URGENT' ? 'border-err bg-[var(--err-bg)] text-err' : 'border-brand bg-brand-pale text-brand-d') : 'border-line-strong text-sub hover:bg-surface-2')}>
-              <input type="radio" name="wf-prio" className="sr-only" checked={value.priority === p.value} onChange={() => set('priority', p.value)} data-testid={`wf-prio-${p.value}`} />{p.label}
-            </label>
-          ))}
+    <div className="space-y-5" data-testid="work-form">
+      <FormSection n={1} title="ข้อมูลงาน">
+        <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+          <Field label="เจ้าหน้าที่ผู้ดำเนินการ" required htmlFor="wf-staff" error={errors?.staff_name}>
+            <Input id="wf-staff" data-testid="wf-staff" value={value.staff_name} readOnly className="bg-surface-3" />
+          </Field>
+          <Field label="วันที่รับงาน" htmlFor="wf-recv"><Input id="wf-recv" type="date" value={value.received_date} onChange={(e) => set('received_date', e.target.value)} /></Field>
+          <Field label="ประเภทงาน" htmlFor="wf-cat">
+            <Select id="wf-cat" data-testid="wf-cat" value={value.job_category} onChange={(e) => set('job_category', e.target.value as JobCategory | '')}>
+              <option value="">— เลือก —</option>
+              {JOB_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </Select>
+          </Field>
+          <Field label={<>รหัสทรัพย์สิน (Asset) <span className="text-xs font-normal text-mute">ไม่บังคับ</span></>} htmlFor="wf-asset" error={errors?.asset_id}
+            hint={requesterAsset && requesterAsset.toUpperCase() !== value.asset_id ? `ผู้แจ้งระบุ: ${requesterAsset}` : 'ดูจากสติ๊กเกอร์ทรัพย์สินบนเครื่อง'}>
+            <Input id="wf-asset" data-testid="wf-asset" value={value.asset_id} maxLength={60} autoComplete="off" spellCheck={false}
+              className="num uppercase" placeholder="เช่น ICT-NB-0123" invalid={!!errors?.asset_id}
+              onChange={(e) => set('asset_id', e.target.value.toUpperCase())} />
+          </Field>
+          <Field label="ความเร่งด่วน" className="lg:col-span-2">
+            <div className="flex max-w-sm gap-2" role="radiogroup" aria-label="ความเร่งด่วน">
+              {PRIORITIES.map((p) => (
+                <label key={p.value} className={clsx('flex h-11 flex-1 cursor-pointer items-center justify-center rounded-xl border px-3 text-sm font-medium transition',
+                  value.priority === p.value ? (p.value === 'URGENT' ? 'border-err bg-[var(--err-bg)] text-err' : 'border-brand bg-brand-pale text-brand-d') : 'border-line-strong text-sub hover:bg-surface-2')}>
+                  <input type="radio" name="wf-prio" className="sr-only" checked={value.priority === p.value} onChange={() => set('priority', p.value)} data-testid={`wf-prio-${p.value}`} />{p.label}
+                </label>
+              ))}
+            </div>
+          </Field>
         </div>
-      </Field>
-      <Field label="ผลการตรวจสอบ" className="sm:col-span-2" htmlFor="wf-insp"><Textarea id="wf-insp" rows={3} maxLength={2000} value={value.inspection_detail} onChange={(e) => set('inspection_detail', e.target.value)} /></Field>
-      <Field label="การให้บริการ / วิธีแก้ไข" required className="sm:col-span-2" htmlFor="wf-act" error={errors?.action_detail}>
-        <Textarea id="wf-act" data-testid="wf-action" rows={3} maxLength={2000} invalid={!!errors?.action_detail} value={value.action_detail} onChange={(e) => set('action_detail', e.target.value)} />
-      </Field>
-      <Field label="การแก้ไขเพิ่มเติม" className="sm:col-span-2" htmlFor="wf-parts"><Textarea id="wf-parts" rows={2} maxLength={1000} value={value.spare_parts_detail} onChange={(e) => set('spare_parts_detail', e.target.value)} /></Field>
-      <Field label="ค่าใช้จ่าย (บาท)" htmlFor="wf-cost"><Input id="wf-cost" data-testid="wf-cost" type="number" min={0} step="0.01" inputMode="decimal" value={value.repair_cost} onChange={(e) => set('repair_cost', e.target.value)} /></Field>
-      <Field label="วันที่เสร็จ" htmlFor="wf-fin"><Input id="wf-fin" type="date" value={value.finish_date} onChange={(e) => set('finish_date', e.target.value)} /></Field>
-      <Field label="ข้อเสนอแนะ" className="sm:col-span-2" htmlFor="wf-rec"><Textarea id="wf-rec" rows={2} maxLength={1000} value={value.recommendations} onChange={(e) => set('recommendations', e.target.value)} /></Field>
-      <Field label="หมายเหตุเพิ่มเติม" className="sm:col-span-2" htmlFor="wf-note"><Textarea id="wf-note" rows={2} maxLength={1000} value={value.additional_notes} onChange={(e) => set('additional_notes', e.target.value)} /></Field>
-      <div className="sm:col-span-2"><FileInput files={value.files} onChange={(f) => set('files', f)} label="แนบไฟล์ผลการดำเนินงาน" max={5} testId="wf-files" /></div>
+      </FormSection>
+
+      <FormSection n={2} title="การตรวจสอบและการแก้ไข">
+        <div className="grid gap-x-4 gap-y-3 lg:grid-cols-2">
+          <Field label="ผลการตรวจสอบ" htmlFor="wf-insp" hint="อาการที่พบ / สาเหตุ"><Textarea id="wf-insp" rows={3} maxLength={2000} value={value.inspection_detail} onChange={(e) => set('inspection_detail', e.target.value)} /></Field>
+          <Field label="การให้บริการ / วิธีแก้ไข" required htmlFor="wf-act" error={errors?.action_detail}>
+            <Textarea id="wf-act" data-testid="wf-action" rows={3} maxLength={2000} invalid={!!errors?.action_detail} value={value.action_detail} onChange={(e) => set('action_detail', e.target.value)} />
+          </Field>
+        </div>
+      </FormSection>
+
+      <FormSection n={3} title="ค่าใช้จ่ายและวันที่เสร็จ">
+        <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+          <Field label="ค่าใช้จ่าย (บาท)" htmlFor="wf-cost" error={errors?.repair_cost} hint="ไม่มีค่าใช้จ่ายให้เว้นว่าง"><Input id="wf-cost" data-testid="wf-cost" type="number" min={0} step="0.01" inputMode="decimal" invalid={!!errors?.repair_cost} value={value.repair_cost} onChange={(e) => set('repair_cost', e.target.value)} /></Field>
+          <Field label="วันที่เสร็จ" htmlFor="wf-fin"><Input id="wf-fin" type="date" value={value.finish_date} onChange={(e) => set('finish_date', e.target.value)} /></Field>
+        </div>
+      </FormSection>
+
+      <section className="rounded-xl border border-line">
+        <button type="button" onClick={() => setMoreOpen((o) => !o)} aria-expanded={moreOpen} aria-controls="wf-more" data-testid="wf-more-toggle"
+          className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-ink hover:bg-surface-2">
+          <ChevronDown className={clsx('size-4 text-sub transition', moreOpen && 'rotate-180')} aria-hidden />
+          ข้อมูลเพิ่มเติม <span className="font-normal text-mute">ไม่บังคับ · การแก้ไขเพิ่มเติม ข้อเสนอแนะ หมายเหตุ ไฟล์แนบ</span>
+          {extraCount > 0 && <span className="num ml-auto rounded-full bg-brand-pale px-2 text-xs text-brand-d">กรอกแล้ว {extraCount}</span>}
+        </button>
+        {moreOpen && (
+          <div id="wf-more" className="grid gap-x-4 gap-y-3 border-t border-line p-4 lg:grid-cols-2">
+            <Field label="การแก้ไขเพิ่มเติม" htmlFor="wf-parts"><Textarea id="wf-parts" rows={2} maxLength={1000} value={value.spare_parts_detail} onChange={(e) => set('spare_parts_detail', e.target.value)} /></Field>
+            <Field label="ข้อเสนอแนะ" htmlFor="wf-rec"><Textarea id="wf-rec" rows={2} maxLength={1000} value={value.recommendations} onChange={(e) => set('recommendations', e.target.value)} /></Field>
+            <Field label="หมายเหตุเพิ่มเติม" htmlFor="wf-note"><Textarea id="wf-note" rows={2} maxLength={1000} value={value.additional_notes} onChange={(e) => set('additional_notes', e.target.value)} /></Field>
+            <div><FileInput files={value.files} onChange={(f) => set('files', f)} label="แนบไฟล์ผลการดำเนินงาน" max={5} testId="wf-files" /></div>
+          </div>
+        )}
+      </section>
     </div>
   );
+}
+
+function FormSection({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
+  return (
+    <section aria-label={title}>
+      <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
+        <span className="num flex size-6 items-center justify-center rounded-full bg-brand-pale text-xs font-bold text-brand-d">{n}</span>{title}
+      </h4>
+      {children}
+    </section>
+  );
+}
+
+/** ช่องบังคับที่ยังไม่ได้กรอก — ใช้แสดงข้างปุ่มบันทึก (id = element ที่จะเลื่อนไปหา) */
+export function workMissing(s: WorkFormState): { id: string; label: string }[] {
+  const m: { id: string; label: string }[] = [];
+  if (!s.staff_name.trim()) m.push({ id: 'wf-staff', label: 'เจ้าหน้าที่ผู้ดำเนินการ' });
+  if (!s.action_detail.trim()) m.push({ id: 'wf-act', label: 'การให้บริการ / วิธีแก้ไข' });
+  if (s.repair_cost && (!Number.isFinite(Number(s.repair_cost)) || Number(s.repair_cost) < 0)) m.push({ id: 'wf-cost', label: 'ค่าใช้จ่ายไม่ถูกต้อง' });
+  return m;
+}
+
+/** สรุปสั้นของสิ่งที่กรอก — แสดงข้างปุ่มบันทึก จะได้ไม่ต้องเลื่อนขึ้นไปเช็ก */
+export function workSummary(s: WorkFormState): string[] {
+  const cat = JOB_CATEGORIES.find((c) => c.value === s.job_category)?.label;
+  const cost = s.repair_cost.trim() && Number.isFinite(Number(s.repair_cost)) ? fmtBaht(Number(s.repair_cost)) : 'ไม่มีค่าใช้จ่าย';
+  return [cat ? `ประเภท ${cat}` : 'ยังไม่เลือกประเภท', s.asset_id ? `Asset ${s.asset_id}` : 'ไม่ระบุ Asset', cost, s.priority === 'URGENT' ? 'ด่วน' : 'ปกติ'];
 }
 
 /** มุมมองอ่านอย่างเดียว */
