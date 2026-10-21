@@ -32,7 +32,7 @@ export function newTicketRecord(
 
 export function blankService(ticket_no: string): TicketService {
   return {
-    ticket_no, work_owner: 'ICO', staff_name: null, received_date: null, job_category: null, priority: null,
+    ticket_no, work_owner: 'ICO', staff_name: null, asset_id: null, received_date: null, job_category: null, priority: null,
     inspection_detail: null, action_detail: null, spare_parts_detail: null, repair_cost: null, finish_date: null,
     recommendations: null, additional_notes: null, attachment_urls: null, work_hours: null, work_status: null,
     work_status_note: null, work_status_at: null, close_summary: null, close_result: null, updated_at: null,
