@@ -138,6 +138,8 @@ export interface WorkInput {
   received_date?: string | null;
   job_category?: JobCategory | '' | null;
   priority?: Priority;
+  /** รหัสทรัพย์สิน (Asset) ที่ตรวจแล้ว — เก็บเป็นตัวพิมพ์ใหญ่ */
+  asset_id?: string | null;
   inspection_detail?: string | null;
   action_detail?: string | null;
   spare_parts_detail?: string | null;
@@ -149,12 +151,20 @@ export interface WorkInput {
   work_hours?: number | null;
 }
 
+/** รหัสทรัพย์สิน: ตัดช่องว่าง → ตัวพิมพ์ใหญ่ → ว่าง = null (ต้องตรงกับ check ใน migration 003) */
+export function normAsset(v: string | null | undefined): string | null {
+  const s = (v ?? '').trim().toUpperCase();
+  if (s.length > 60) throw new WorkflowError('รหัสทรัพย์สินยาวเกิน 60 ตัวอักษร');
+  return s || null;
+}
+
 function workPatch(i: WorkInput, owner: 'ICO' | 'ITL', ctx: Ctx): Partial<TicketService> {
   return {
     work_owner: owner,
     staff_name: clean(i.staff_name) || null,
     received_date: i.received_date || null,
     job_category: (i.job_category as JobCategory) || null,
+    asset_id: normAsset(i.asset_id),
     priority: i.priority ?? 'NORMAL',
     inspection_detail: orNull(i.inspection_detail),
     action_detail: orNull(i.action_detail),
@@ -189,7 +199,7 @@ export function icoSaveWork(t: Ticket, svc: TicketService | null, input: WorkInp
       action_by: clean(input.staff_name), comment: logComment,
     }],
     event: baseEvent(t, ctx, send ? 'ICT_ACTION' : 'ICO_DRAFT', send ? 'SUBMITTED' : 'DRAFT', newStatus, {
-      staff_name: clean(input.staff_name), job_category: input.job_category || '',
+      staff_name: clean(input.staff_name), job_category: input.job_category || '', asset_id: normAsset(input.asset_id) || '',
       inspection_detail: input.inspection_detail || '', action_detail: input.action_detail || '',
       spare_parts: input.spare_parts_detail || '', repair_cost: input.repair_cost || 0,
       finish_date: input.finish_date || '', priority: input.priority ?? 'NORMAL',
