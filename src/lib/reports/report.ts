@@ -95,7 +95,7 @@ export function ticketRows(r: ReportResult) {
 }
 export function serviceRows(r: ReportResult) {
   return r.services.map((s) => clean({
-    'เลขที่ Ticket': s.ticket_no, 'ผู้ปฏิบัติงาน': s.staff_name, 'วันที่รับงาน': s.received_date || '',
+    'เลขที่ Ticket': s.ticket_no, 'รหัสทรัพย์สิน (ยืนยันโดย IT)': s.asset_id || '', 'ผู้ปฏิบัติงาน': s.staff_name, 'วันที่รับงาน': s.received_date || '',
     'รายละเอียดการตรวจสอบ': s.inspection_detail || '', 'รายละเอียดการดำเนินการ': s.action_detail || '', 'อะไหล่ที่ใช้': s.spare_parts_detail || '',
     'ค่าใช้จ่าย': s.repair_cost ?? '', 'ชั่วโมงทำงาน': s.work_hours ?? '', 'วันที่เสร็จสิ้น': s.finish_date || '',
     'หมายเหตุเพิ่มเติม': s.additional_notes || '', 'ข้อเสนอแนะ': s.recommendations || '', 'สรุปผลปิดงาน': s.close_summary || '',
