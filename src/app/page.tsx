@@ -1,87 +1,85 @@
-'use client';
-import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, LogIn } from 'lucide-react';
-import { AuthShell } from '@/components/layout/AuthShell';
-import { Button } from '@/components/ui/Button';
-import { Field, Input } from '@/components/ui/Field';
-import { ROLE_LABEL, ROLE_PORTAL } from '@/lib/constants';
-import { DEMO_PASSWORD } from '@/lib/mock/users';
-import { useServices, useSession } from '@/hooks';
+import { ArrowRight, LogIn, Plus, Search } from 'lucide-react';
+import { PublicShell } from '@/components/layout/PublicShell';
+import { TrackLookup } from '@/components/portal/TrackLookup';
 
-/** กัน open-redirect: อนุญาตเฉพาะ path ภายในเว็บ */
-function safeNext(n: string | null) { return n && n.startsWith('/') && !n.startsWith('//') ? n : null; }
+/** ขั้นตอนหลังแจ้งปัญหา (ตาม workflow: OPEN → หัวหน้าอนุมัติ → ICO/ITL/ITM → DONE → แบบประเมิน) */
+const STEPS = [
+  { title: 'แจ้งปัญหา', desc: 'ได้เลขที่งานและลิงก์ติดตามทันที' },
+  { title: 'หัวหน้างานอนุมัติ', desc: 'ผ่านลิงก์อนุมัติ' },
+  { title: 'ทีม ICT ดำเนินการ', desc: 'ICO → ITL → IT Manager' },
+  { title: 'ประเมินความพึงพอใจ', desc: 'หลังปิดงาน' },
+];
 
-function LoginForm() {
-  const svc = useServices();
-  const { user, setUser } = useSession();
-  const router = useRouter();
-  const next = safeNext(useSearchParams().get('next'));
-  const [email, setEmail] = useState('');
-  const [pw, setPw] = useState('');
-  const [show, setShow] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState('');
-
-  useEffect(() => { if (user) router.replace(next || ROLE_PORTAL[user.role]); }, [user, next, router]);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!svc) return;
-    setMsg(''); setBusy(true);
-    try {
-      const u = await svc.auth.signIn(email.trim(), pw);
-      setUser(u);
-      router.replace(next || ROLE_PORTAL[u.role]);
-    } catch (err) {
-      setMsg(err instanceof Error ? err.message : 'ไม่สามารถเข้าสู่ระบบได้');
-      setBusy(false);
-    }
-  }
-  async function quick(em: string) {
-    if (!svc) return;
-    setBusy(true);
-    try { const u = await svc.auth.signIn(em, DEMO_PASSWORD); setUser(u); router.replace(next || ROLE_PORTAL[u.role]); } catch (err) { setMsg(String(err)); setBusy(false); }
-  }
-
+/** หน้าแรกสาธารณะ — ผู้แจ้งเลือก "แจ้งปัญหาใหม่" หรืออ่านวิธีติดตามงาน; เจ้าหน้าที่เข้าสู่ระบบจากมุมขวาบน */
+export default function HomePage() {
   return (
-    <AuthShell title="เข้าสู่ระบบเจ้าหน้าที่ IT" subtitle="สำหรับ ICO · ITL · IT Manager"
-      footer={<Link href="/" className="hover:text-white">← กลับหน้าแรก</Link>}>
-      <form onSubmit={submit} className="space-y-4" noValidate>
-        <Field label="อีเมล" htmlFor="email"><Input id="email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@nissei.co.th" required /></Field>
-        <Field label="รหัสผ่าน" htmlFor="password">
-          <div className="relative">
-            <Input id="password" type={show ? 'text' : 'password'} autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} required className="pr-11" />
-            <button type="button" onClick={() => setShow((s) => !s)} aria-label={show ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'} className="absolute top-1/2 right-3 -translate-y-1/2 text-mute hover:text-ink">{show ? <EyeOff className="size-5" /> : <Eye className="size-5" />}</button>
-          </div>
-        </Field>
-        {msg && <p role="alert" data-testid="login-error" className="rounded-lg bg-[var(--err-bg)] px-3 py-2 text-sm text-[var(--err-fg)]">{msg}</p>}
-        <Button type="submit" block size="lg" loading={busy} disabled={!svc}><LogIn className="size-5" />เข้าสู่ระบบ</Button>
-        <p className="text-center text-sm"><Link href="/forgot-password" className="text-brand-d hover:underline">ลืมรหัสผ่าน?</Link></p>
-      </form>
-      {svc?.source === 'mock' && (
-        <div className="mt-6 border-t border-line pt-4" data-testid="quick-login">
-          <p className="mb-2 text-xs font-medium text-sub">โหมดทดลอง — เข้าสู่ระบบด่วน (รหัสผ่าน {DEMO_PASSWORD})</p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {svc.auth.demoAccounts?.().map((a) => (
-              <button key={a.id} type="button" disabled={busy} onClick={() => quick(a.email)} data-testid={`quick-${a.email.split('@')[0]}`}
-                className="rounded-xl border border-line bg-surface-2 px-3 py-2 text-left text-sm transition hover:border-brand hover:bg-brand-pale disabled:opacity-50">
-                <span className="block font-medium">{a.display_name}</span><span className="text-xs text-sub">{ROLE_LABEL[a.role]} · {a.email}</span>
-              </button>
-            ))}
+    <PublicShell
+      right={
+        <>
+          <Link href="/request" className="hidden h-9 items-center rounded-lg px-3 text-sm font-medium text-brand-d hover:bg-brand-pale sm:inline-flex">
+            แจ้งปัญหา
+          </Link>
+          <Link href="/login" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 text-sm font-medium text-ink hover:border-brand hover:text-brand-d">
+            <LogIn className="size-4" aria-hidden />
+            เจ้าหน้าที่ IT
+          </Link>
+        </>
+      }
+    >
+      <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-8 sm:px-8 sm:py-12" data-testid="landing">
+        {/* ───── Hero ───── */}
+        <section>
+          <span className="tone-blue inline-flex rounded-full px-3 py-0.5 text-xs font-semibold">แผนก ICT · ตอบกลับภายใน 1 วันทำการ</span>
+          <h1 className="mt-4 text-[26px] leading-tight font-bold text-ink sm:text-[34px]">
+            มีปัญหาเรื่องคอมพิวเตอร์ โปรแกรม หรือเครือข่าย
+            <br className="hidden sm:block" /> แจ้งทีม ICT ได้ที่นี่
+          </h1>
+          <p className="mt-3 max-w-2xl text-base text-sub">
+            กรอกแบบฟอร์ม 2 ขั้นตอน ระบบจะส่งคำขอให้หัวหน้างานอนุมัติ แล้วทีม ICT จะรับงานต่อ
+            คุณติดตามสถานะได้ตลอดด้วยเลขที่งานและอีเมลของคุณ
+          </p>
+        </section>
+
+        {/* ───── ทางเลือกหลัก ───── */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Link
+            href="/request"
+            data-testid="landing-request"
+            className="group flex flex-col gap-2.5 rounded-xl border border-line bg-surface p-6 shadow-card transition hover:border-brand focus-visible:border-brand"
+          >
+            <span className="flex size-11 items-center justify-center rounded-lg bg-brand text-on-brand"><Plus className="size-5" aria-hidden /></span>
+            <span className="text-lg font-bold text-ink">แจ้งปัญหาใหม่</span>
+            <span className="text-sub">ใช้เวลาประมาณ 2 นาที ไม่ต้องล็อกอิน</span>
+            <span className="mt-auto inline-flex items-center gap-1 font-semibold text-brand-d">
+              เริ่มกรอกแบบฟอร์ม <ArrowRight className="size-4 transition group-hover:translate-x-0.5" aria-hidden />
+            </span>
+          </Link>
+
+          <div className="flex flex-col gap-2.5 rounded-xl border border-line bg-surface p-6 shadow-card" data-testid="landing-track">
+            <span className="flex size-11 items-center justify-center rounded-lg bg-brand-pale text-brand-d"><Search className="size-5" aria-hidden /></span>
+            <span className="text-lg font-bold text-ink">ติดตามสถานะงาน</span>
+            <span className="text-sub">กรอกเลขที่งานคู่กับอีเมลที่ใช้ตอนแจ้ง หรือเปิดลิงก์ติดตามที่ได้หลังส่งคำขอ</span>
+            <TrackLookup />
           </div>
         </div>
-      )}
-    </AuthShell>
-  );
-}
 
-/** useSearchParams() ต้องอยู่ใน <Suspense> ไม่เช่นนั้น next build จะล้มตอน prerender หน้า /login */
-export default function LoginPage() {
-  return (
-    <Suspense fallback={null}>
-      <LoginForm />
-    </Suspense>
+        {/* ───── ขั้นตอน ───── */}
+        <section className="rounded-xl border border-line bg-surface p-5 shadow-card sm:p-6" aria-labelledby="how-h">
+          <h2 id="how-h" className="mb-4 text-base font-bold text-ink">ขั้นตอนหลังแจ้งปัญหา</h2>
+          <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {STEPS.map((s, i) => (
+              <li key={s.title} className="flex gap-3">
+                <span className="num flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-pale text-sm font-bold text-brand-d">{i + 1}</span>
+                <span>
+                  <span className="block font-semibold text-ink">{s.title}</span>
+                  <span className="text-[13px] text-sub">{s.desc}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      </div>
+    </PublicShell>
   );
 }
