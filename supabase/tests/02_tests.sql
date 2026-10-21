@@ -159,6 +159,20 @@ select t.ok(public.find_track_token('ICT-2001-1', 'nobody@x.co') is null, 'track
 select t.err('select * from public.ict_track_lookup_fail', 'permission denied', 'anon cannot read lookup log');
 reset role;
 
+-- ───── 003: รหัสทรัพย์สินในงานซ่อม
+select t.ok(exists (select 1 from information_schema.columns where table_name = 'ticket_services' and column_name = 'asset_id'), 'ticket_services.asset_id exists');
+set role authenticated;
+select t.as_user(:'ICO');
+update public.ticket_services set asset_id = 'ICT-NB-0123' where ticket_no = :'new_no';
+select t.ok((select asset_id from public.ticket_services where ticket_no = :'new_no') = 'ICT-NB-0123', 'staff can save asset id on service');
+select t.err(format($$update public.ticket_services set asset_id = 'ict-nb-0123 ' where ticket_no = %L$$, :'new_no'), 'ticket_services_asset_id_chk', 'asset id must be trimmed uppercase');
+select t.err(format($$update public.ticket_services set asset_id = %L where ticket_no = %L$$, repeat('A', 61), :'new_no'), 'ticket_services_asset_id_chk', 'asset id max 60 chars');
+reset role;
+set role anon;
+select t.as_user(null);
+select t.err('select asset_id from public.ticket_services', 'permission denied', 'anon cannot read service asset ids');
+reset role;
+
 -- ───── สรุป
 \set QUIET off
 select count(*) filter (where ok) as passed, count(*) filter (where not ok) as failed from t.results;

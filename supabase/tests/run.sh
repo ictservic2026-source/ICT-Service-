@@ -12,6 +12,8 @@ run "$here/../migrations/001_secure_public_access.sql"
 run "$here/../migrations/001_secure_public_access.sql"   # รันซ้ำได้ (idempotent)
 run "$here/../migrations/002_track_lookup.sql"
 run "$here/../migrations/002_track_lookup.sql"           # รันซ้ำได้
+run "$here/../migrations/003_service_asset_id.sql"
+run "$here/../migrations/003_service_asset_id.sql"       # รันซ้ำได้
 out="$(psql -X -v ON_ERROR_STOP=1 -d "$db" -f "$here/02_tests.sql" 2>&1)"
 echo "$out" | grep -E "WARNING|ERROR" || true
 echo "$out" | sed -n '/passed | failed/,/^(/p'
