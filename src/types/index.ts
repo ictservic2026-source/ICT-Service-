@@ -102,6 +102,8 @@ export interface TicketService {
   ticket_no: string;
   work_owner: WorkOwner;
   staff_name: string | null;
+  /** รหัสทรัพย์สินที่เจ้าหน้าที่ยืนยัน (migration 003) — tickets.asset_id คือค่าที่ผู้แจ้งกรอก */
+  asset_id?: string | null;
   received_date: string | null;
   job_category: JobCategory | null;
   priority: Priority | null;
