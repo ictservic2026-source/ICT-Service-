@@ -144,6 +144,21 @@ select t.err(format($$select public.submit_survey(%L, array[30,30,20,10,10], tru
 reset role;
 select t.ok((select survey_score from public.tickets where ticket_no = :'new_no') = 95, 'tickets.survey_score updated');
 
+-- ───── 002: ค้นหางานด้วยเลขที่งาน + อีเมลผู้แจ้ง
+select track_token as new_track from public.tickets where ticket_no = :'new_no' \gset
+set role anon;
+select t.as_user(null);
+select t.ok(public.find_track_token(lower(:'new_no'), '  REQ@x.co ') = :'new_track', 'track lookup: ticket no + email (case/space-insensitive)');
+select t.ok(public.find_track_token(:'new_no', 'other@x.co') is null, 'track lookup: wrong email returns null');
+select t.ok(public.find_track_token('ICT-9999-1', 'req@x.co') is null, 'track lookup: unknown ticket returns null (same as wrong email)');
+select t.ok(public.find_track_token($$ICT-2001-1' or '1'='1$$, 'x@x.co') is null, 'track lookup: malformed ticket no rejected');
+select t.ok(public.find_track_token(:'new_no', '') is null, 'track lookup: empty email rejected');
+select count(public.find_track_token(:'new_no', 'wrong@x.co')) from generate_series(1, 4) \gset
+select t.err(format('select public.find_track_token(%L, %L)', :'new_no', 'req@x.co'), 'กรุณารอ 15 นาที', 'track lookup: locked after 5 failed attempts');
+select t.ok(public.find_track_token('ICT-2001-1', 'nobody@x.co') is null, 'track lookup: lock is per ticket');
+select t.err('select * from public.ict_track_lookup_fail', 'permission denied', 'anon cannot read lookup log');
+reset role;
+
 -- ───── สรุป
 \set QUIET off
 select count(*) filter (where ok) as passed, count(*) filter (where not ok) as failed from t.results;
