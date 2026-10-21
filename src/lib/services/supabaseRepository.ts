@@ -75,6 +75,16 @@ export class SupabaseRepository implements Repository {
     return (data as PublicTicketView | null) ?? null;
   }
 
+  async findTrackToken(ticketNo: string, email: string): Promise<string | null> {
+    // migration 002: เลขที่งาน + อีเมลผู้แจ้ง → track token (ค้นผิด 5 ครั้งล็อก 15 นาที)
+    const { data, error } = await this.sb.rpc('find_track_token', { p_ticket_no: ticketNo, p_email: email });
+    if (error) {
+      if (error.code === 'PGRST202' || error.code === '42883') throw new Error('ระบบค้นหายังไม่พร้อม (ยังไม่ได้รัน supabase/migrations/002_track_lookup.sql)');
+      rpcFail(error, 'ค้นหางาน');
+    }
+    return typeof data === 'string' && data ? data : null;
+  }
+
   async createTicket(input: NewTicketInput): Promise<Ticket> {
     // ตรวจซ้ำฝั่ง DB อีกชั้นใน create_ticket() — เลขที่งานออกภายใต้ advisory lock จึงไม่ชนกัน
     const errs = validateRequest(input);

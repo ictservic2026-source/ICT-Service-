@@ -87,6 +87,14 @@ export class MockRepository implements Repository {
     return this.db.tickets.find((x) => x[field] === token);
   }
 
+  async findTrackToken(ticketNo: string, email: string): Promise<string | null> {
+    await this.lag();
+    const no = ticketNo.trim().toUpperCase(), em = email.trim().toLowerCase();
+    if (!no || !em) return null;
+    const t = this.db.tickets.find((x) => x.ticket_no.toUpperCase() === no && (x.requester_email ?? '').trim().toLowerCase() === em);
+    return t?.track_token ?? null;
+  }
+
   async getPublicTicket(kind: TokenKind, token: string): Promise<PublicTicketView | null> {
     await this.lag();
     const t = this.byToken(kind, token);

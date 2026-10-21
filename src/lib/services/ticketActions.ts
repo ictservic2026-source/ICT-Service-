@@ -89,6 +89,11 @@ export class TicketActions {
     return this.repo.getPublicTicket(kind, token);
   }
 
+  /** ผู้แจ้งค้นงานด้วยเลขที่งาน + อีเมลที่ใช้ตอนแจ้ง → track token (null = ไม่พบ) */
+  async findTrack(ticketNo: string, email: string): Promise<string | null> {
+    return this.repo.findTrackToken(ticketNo, email);
+  }
+
   /* ───────── หัวหน้างาน (Secure Token) ───────── */
   async managerDecide(
     token: string,

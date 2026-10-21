@@ -42,6 +42,8 @@ export interface Repository {
   /* ── ผู้ใช้ไม่ล็อกอิน: ทุกเมธอดในกลุ่มนี้ทำงานผ่าน token เท่านั้น (Supabase → RPC security definer) ── */
   /** เปิดตั๋วด้วย Secure Token จากลิงก์สาธารณะ — null ถ้า token ไม่ตรง */
   getPublicTicket(kind: TokenKind, token: string): Promise<PublicTicketView | null>;
+  /** ผู้แจ้งค้นงานของตัวเอง: คืน track token เมื่อเลขที่งานและอีเมลผู้แจ้งตรงกัน (ไม่ตรง/ไม่มี = null) */
+  findTrackToken(ticketNo: string, email: string): Promise<string | null>;
   /** คืนตั๋วพร้อม approve/survey/track token (ให้ผู้แจ้งเท่านั้น) */
   createTicket(input: NewTicketInput): Promise<Ticket>;
   /** บันทึกผลของหัวหน้างาน (tr จาก machine.managerDecision) — ตัดสินได้ครั้งเดียว */
