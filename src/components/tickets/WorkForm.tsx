@@ -10,19 +10,21 @@ import { FileInput } from '@/components/forms/FileInput';
 import { Attachments } from './Attachments';
 
 export interface WorkFormState {
-  staff_name: string; received_date: string; job_category: JobCategory | ''; priority: Priority;
+  staff_name: string; received_date: string; job_category: JobCategory | ''; priority: Priority; asset_id: string;
   inspection_detail: string; action_detail: string; spare_parts_detail: string; repair_cost: string;
   finish_date: string; recommendations: string; additional_notes: string; files: File[];
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-export function workStateFrom(svc: TicketService | null, staff: string): WorkFormState {
+/** ticketAsset = รหัสที่ผู้แจ้งกรอก ใช้เป็นค่าเริ่มต้นจนกว่าเจ้าหน้าที่จะบันทึกค่าของตัวเอง */
+export function workStateFrom(svc: TicketService | null, staff: string, ticketAsset?: string | null): WorkFormState {
   return {
     staff_name: svc?.staff_name || staff,
     received_date: svc?.received_date || today(),
     job_category: svc?.job_category || '',
     priority: svc?.priority || 'NORMAL',
+    asset_id: svc?.asset_id || (ticketAsset ?? '').trim().toUpperCase(),
     inspection_detail: svc?.inspection_detail || '',
     action_detail: svc?.action_detail || '',
     spare_parts_detail: svc?.spare_parts_detail || '',
@@ -38,14 +40,14 @@ export function toWorkInput(s: WorkFormState): WorkInput {
   const cost = s.repair_cost.trim() === '' ? null : Math.max(0, Number(s.repair_cost));
   return {
     staff_name: s.staff_name, received_date: s.received_date || null, job_category: s.job_category,
-    priority: s.priority, inspection_detail: s.inspection_detail, action_detail: s.action_detail,
+    priority: s.priority, asset_id: s.asset_id, inspection_detail: s.inspection_detail, action_detail: s.action_detail,
     spare_parts_detail: s.spare_parts_detail, repair_cost: Number.isFinite(cost as number) ? cost : null,
     finish_date: s.finish_date || null, recommendations: s.recommendations, additional_notes: s.additional_notes,
   };
 }
 
 /** ฟอร์มบันทึกงาน (ICO / Direct ITL) — ฟิลด์ตามฟอร์มเดิมใน admin-ico.js */
-export function WorkForm({ value, onChange, errors }: { value: WorkFormState; onChange: (v: WorkFormState) => void; errors?: Partial<Record<keyof WorkFormState, string>> }) {
+export function WorkForm({ value, onChange, errors, requesterAsset }: { value: WorkFormState; onChange: (v: WorkFormState) => void; errors?: Partial<Record<keyof WorkFormState, string>>; requesterAsset?: string | null }) {
   const set = <K extends keyof WorkFormState>(k: K, v: WorkFormState[K]) => onChange({ ...value, [k]: v });
   return (
     <div className="grid gap-4 sm:grid-cols-2" data-testid="work-form">
@@ -58,6 +60,12 @@ export function WorkForm({ value, onChange, errors }: { value: WorkFormState; on
           <option value="">— เลือก —</option>
           {JOB_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
         </Select>
+      </Field>
+      <Field label={<>รหัสทรัพย์สิน (Asset) <span className="text-xs font-normal text-mute">ไม่บังคับ</span></>} htmlFor="wf-asset" error={errors?.asset_id}
+        hint={requesterAsset && requesterAsset.toUpperCase() !== value.asset_id ? `ผู้แจ้งระบุ: ${requesterAsset}` : 'ดูจากสติ๊กเกอร์ทรัพย์สินบนเครื่อง'}>
+        <Input id="wf-asset" data-testid="wf-asset" value={value.asset_id} maxLength={60} autoComplete="off" spellCheck={false}
+          className="num uppercase" placeholder="เช่น ICT-NB-0123" invalid={!!errors?.asset_id}
+          onChange={(e) => set('asset_id', e.target.value.toUpperCase())} />
       </Field>
       <Field label="ความเร่งด่วน">
         <div className="flex gap-2" role="radiogroup" aria-label="ความเร่งด่วน">
@@ -91,6 +99,7 @@ export function WorkView({ svc }: { svc: TicketService | null }) {
       <KV k="ผู้ดำเนินการ" v={`${svc.staff_name || '—'} (${svc.work_owner === 'ITL' ? 'Direct ITL' : 'ICO'})`} />
       <KV k="วันที่รับงาน" v={fmtDate(svc.received_date)} />
       <KV k="ประเภทงาน" v={svc.job_category} />
+      <KV k="รหัสทรัพย์สิน (Asset)" v={svc.asset_id} />
       <KV k="ความเร่งด่วน" v={svc.priority === 'URGENT' ? 'ด่วน' : 'ปกติ'} />
       <KV k="ผลการตรวจสอบ" v={svc.inspection_detail} />
       <KV k="การให้บริการ" v={svc.action_detail} />

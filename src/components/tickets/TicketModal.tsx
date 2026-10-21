@@ -56,7 +56,7 @@ export function TicketModal({ ticketNo, portal, onClose, initialTab }: {
 
   // ฟอร์มงานเริ่มต้นจากข้อมูลที่บันทึกไว้ — โหลดใหม่เฉพาะเมื่อเปลี่ยนตั๋ว/มี service เปลี่ยน
   const svcStamp = svc?.updated_at ?? '';
-  useEffect(() => { setForm(workStateFrom(svc, me)); setFormErr({}); setDecision(''); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [ticketNo, svcStamp, me]);
+  useEffect(() => { setForm(workStateFrom(svc, me, ticket?.asset_id)); setFormErr({}); setDecision(''); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [ticketNo, svcStamp, me]);
   useEffect(() => { setTab(initialTab ?? 'req'); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [ticketNo]);
 
   // read receipts: โหลดและทำเครื่องหมาย "อ่านแล้ว" เมื่อเปิดแท็บประวัติ
@@ -275,7 +275,7 @@ export function TicketModal({ ticketNo, portal, onClose, initialTab }: {
               )}
               {A.icoCanClose && portal === 'ICO' && A.isDirectItl && <Banner tone="info">งาน Direct ITL — ปิดงานได้ทันที (ไม่ต้องกรอกสรุป)</Banner>}
               {formEditable && form
-                ? <WorkForm value={form} onChange={setForm} errors={formErr} />
+                ? <WorkForm value={form} onChange={setForm} errors={formErr} requesterAsset={ticket.asset_id} />
                 : (portal === 'ICO' && !A.icoCanWork && ticket.status === 'OPEN')
                   ? <p className="py-6 text-center text-sm text-mute">รอหัวหน้างานอนุมัติก่อนจึงจะบันทึกงานได้</p>
                   : <WorkView svc={svc} />}
