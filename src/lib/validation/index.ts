@@ -34,8 +34,7 @@ export function validateRequest(i: Partial<NewTicketInput>): Errors<RequestField
   });
   if (!e.requester_email && !EMAIL_RE.test(i.requester_email!.trim())) e.requester_email = 'รูปแบบอีเมลไม่ถูกต้อง';
   if (!e.manager_email && !EMAIL_RE.test(i.manager_email!.trim())) e.manager_email = 'รูปแบบอีเมลหัวหน้างานไม่ถูกต้อง';
-  if (!e.requester_email && !e.manager_email && i.manager_email!.trim().toLowerCase() === i.requester_email!.trim().toLowerCase())
-    e.manager_email = 'อีเมลหัวหน้างานต้องไม่ใช่อีเมลของผู้แจ้ง';
+  // อีเมลหัวหน้างานซ้ำกับผู้แจ้งได้ (เช่น หัวหน้าแจ้งเอง) — เปิดใช้ตาม migration 004
   if (!e.required_date && isNaN(new Date(i.required_date!).getTime())) e.required_date = 'วันที่ไม่ถูกต้อง';
   if ((i.issue_detail || '').length > 500) e.issue_detail = 'ยาวเกิน 500 ตัวอักษร';
   if ((i.asset_id || '').length > 60) e.asset_id = 'รหัสทรัพย์สินยาวเกินไป';
