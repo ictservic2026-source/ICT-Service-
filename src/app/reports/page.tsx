@@ -16,7 +16,7 @@ import { PageLoading } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { HBars } from '@/components/dashboard/Charts';
 import { TicketDrawer } from '@/components/dashboard/TicketDrawer';
-import { CaseDocButton, CaseDocsPanel } from '@/components/reports/CaseDocs';
+import { CaseDocButton, CaseDocsPanel } from '@/components/CaseDocs';
 
 const PREVIEW_MAX = 200;
 
