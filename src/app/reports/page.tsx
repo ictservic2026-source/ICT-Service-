@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react';
 import { Download, Search } from 'lucide-react';
 import type { TicketStatus } from '@/types';
-import { ALL_STATUSES, CASE_TABLE_COLS, PENDING_STATUSES, caseTableRows, defaultReportFilter, logRows, periodLabel, reportFileName, runReport, serviceRows, summarize, surveyRows, ticketRows, type Period, type ReportFilter, type ReportResult } from '@/lib/reports/report';
+import { ALL_STATUSES, CASE_TABLE_COLS, PENDING_STATUSES, caseTableRows, defaultReportFilter, periodLabel, reportFileName, runReport, summarize, type Period, type ReportFilter, type ReportResult } from '@/lib/reports/report';
 import { STATUS_META } from '@/lib/constants';
 import { fmtShortDate, fmtMoney } from '@/lib/utils/format';
 import { useSnapshot, useToast } from '@/hooks';
@@ -47,15 +47,11 @@ export default function ReportsPage() {
     try {
       const XLSX = await import('xlsx');
       const wb = XLSX.utils.book_new();
-      // ชีตแรก: ตารางเคส (กรอง/เรียงได้ทุกคอลัมน์)
-      const cases = XLSX.utils.json_to_sheet(caseTableRows(r), { header: CASE_TABLE_COLS.map((c) => c.h) });
-      cases['!cols'] = CASE_TABLE_COLS.map((c) => ({ wch: c.w }));
-      if (cases['!ref']) cases['!autofilter'] = { ref: cases['!ref'] };
-      XLSX.utils.book_append_sheet(wb, cases, 'ตารางเคส');
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ticketRows(r)), 'สรุป Ticket');
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(serviceRows(r)), 'รายละเอียดงาน');
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(surveyRows(r)), 'ผลประเมินความพึงพอใจ');
-      if (f.includeLog) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(logRows(r)), 'ประวัติ Log');
+      // หน้าเดียว 11 คอลัมน์ — วันที่เป็นข้อความ DD-MM-YY (ค.ศ.)
+      const ws = XLSX.utils.aoa_to_sheet([CASE_TABLE_COLS.map((c) => c.h), ...caseTableRows(r)]);
+      ws['!cols'] = CASE_TABLE_COLS.map((c) => ({ wch: c.w }));
+      if (ws['!ref']) ws['!autofilter'] = { ref: ws['!ref'] };
+      XLSX.utils.book_append_sheet(wb, ws, 'รายงาน');
       const name = reportFileName(f);
       XLSX.writeFile(wb, name);
       toast.success(`Export สำเร็จ: ${name}`);
@@ -93,7 +89,6 @@ export default function ReportsPage() {
             <div className="flex flex-wrap items-center gap-3 border-t border-line pt-4">
               <Button onClick={search} data-testid="rf-search"><Search className="size-4" />ค้นหา / แสดงตัวอย่าง</Button>
               <Button variant="success" onClick={exportXlsx} loading={busy} data-testid="rf-export"><Download className="size-4" />Export เป็น Excel</Button>
-              <Checkbox data-testid="rf-log" checked={f.includeLog} onChange={(e) => set({ includeLog: e.target.checked })} label="รวมประวัติ Log (ชีตเพิ่ม)" />
             </div>
           </Card>
 
