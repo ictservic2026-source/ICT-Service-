@@ -4,7 +4,7 @@
  */
 import type { Priority, Survey, Ticket, TicketLog, TicketService, TicketStatus } from '@/types';
 import type { Snapshot } from '@/lib/services/repository';
-import { CLOSE_RESULTS, JOB_CATEGORIES, STATUS_META, STATUS_ORDER } from '@/lib/constants';
+import { STATUS_META, STATUS_ORDER } from '@/lib/constants';
 import { fmtDateTime } from '@/lib/utils/format';
 
 export type Period = 'all' | 'month' | 'year' | 'range';
@@ -93,42 +93,30 @@ export function ticketRows(r: ReportResult) {
     });
   });
 }
-/** วันที่แบบ Excel (ไม่มีเวลา) — ให้กรอง/เรียงในตารางได้ */
-const d10 = (v?: string | null) => (v ? String(v).slice(0, 10) : '');
-const jobLabel = (v?: string | null) => JOB_CATEGORIES.find((c) => c.value === v)?.label ?? (v || '');
-const closeLabel = (v?: string | null) => (CLOSE_RESULTS.find((c) => c.value === v)?.label.replace(/^\S+\s/, '') ?? (v || ''));
-const daysBetween = (a?: string | null, b?: string | null) => {
-  if (!a || !b) return '';
-  const n = Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86400000);
-  return Number.isFinite(n) && n >= 0 ? n : '';
-};
+/** วันที่ DD-MM-YY ปี ค.ศ. 2 หลัก ตามเวลาไทย เช่น 22-10-26 */
+export function dmyTH(v?: string | null): string {
+  if (!v) return '';
+  const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(v) ? `${v}T00:00:00+07:00` : v);
+  if (isNaN(d.getTime())) return '';
+  const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric' }).formatToParts(d);
+  const get = (t: string) => p.find((x) => x.type === t)?.value ?? '';
+  return `${get('day')}-${get('month')}-${get('year').slice(-2)}`;
+}
 
-/** ชีต "ตารางเคส" — 1 แถวต่อ 1 เคส รวมข้อมูลคำขอ งานซ่อม และผลประเมินไว้ในแถวเดียว เรียงตามเลขที่งาน */
+/** Excel หน้าเดียว — 11 คอลัมน์ เรียงตามเลขที่งาน (คอลัมน์ 9 เว้นว่างไว้) */
 export const CASE_TABLE_COLS: { h: string; w: number }[] = [
-  { h: 'เลขที่งาน', w: 14 }, { h: 'วันที่แจ้ง', w: 11 }, { h: 'วันที่ต้องการ', w: 11 }, { h: 'สถานะ', w: 18 },
-  { h: 'ผู้แจ้ง', w: 18 }, { h: 'แผนก', w: 12 }, { h: 'สถานที่', w: 16 }, { h: 'รหัสทรัพย์สิน', w: 15 },
-  { h: 'ประเภทงาน', w: 11 }, { h: 'ความเร่งด่วน', w: 10 }, { h: 'รายละเอียดปัญหา', w: 40 },
-  { h: 'หัวหน้างานผู้อนุมัติ', w: 18 }, { h: 'ผลอนุมัติหัวหน้า', w: 12 },
-  { h: 'ผู้ดำเนินการ', w: 16 }, { h: 'ประเภทผู้ดำเนินการ', w: 12 }, { h: 'ผลการตรวจสอบ', w: 30 }, { h: 'การให้บริการ / วิธีแก้ไข', w: 34 },
-  { h: 'ค่าใช้จ่าย (บาท)', w: 12 }, { h: 'ITL ผู้ตรวจสอบ', w: 16 }, { h: 'IT Manager ผู้อนุมัติ', w: 16 },
-  { h: 'วันที่เสร็จ', w: 11 }, { h: 'วันที่ปิดงาน', w: 11 }, { h: 'ใช้เวลา (วัน)', w: 9 }, { h: 'ผลปิดงาน', w: 14 },
-  { h: 'คะแนนประเมิน (เต็ม 100)', w: 11 }, { h: 'จำนวนไฟล์แนบ', w: 9 },
+  { h: 'เลขที่งาน', w: 14 }, { h: 'วันที่แจ้ง', w: 11 }, { h: 'ชื่อผู้แจ้ง', w: 20 }, { h: 'แผนก', w: 14 },
+  { h: 'วันที่ต้องการ', w: 12 }, { h: 'รายละเอียดงาน', w: 45 }, { h: 'การแก้ปัญหา', w: 45 }, { h: 'ค่าใช้จ่าย', w: 11 },
+  { h: ' ', w: 12 }, { h: 'วันที่แล้วเสร็จ', w: 13 }, { h: 'คะแนนประเมิน', w: 12 },
 ];
-export function caseTableRows(r: ReportResult) {
+export function caseTableRows(r: ReportResult): unknown[][] {
   return [...r.tickets].sort((a, b) => a.ticket_no.localeCompare(b.ticket_no, 'en', { numeric: true })).map((t) => {
     const s = r.serviceMap.get(t.ticket_no), sv = r.surveyMap.get(t.ticket_no);
-    const files = arr(t.issue_img_url).length + arr(t.attachment_url).length + arr(s?.attachment_urls).length;
-    const v: unknown[] = [
-      t.ticket_no, d10(t.request_date), d10(t.required_date), STATUS_META[t.status]?.label ?? t.status,
-      t.requester_name, t.department, t.location, s?.asset_id || t.asset_id || '',
-      jobLabel(s?.job_category), s?.priority === 'URGENT' ? 'ด่วน' : s?.priority ? 'ปกติ' : '', t.issue_detail,
-      t.mgr_name || '', t.mgr_status === 'APPROVED' ? 'อนุมัติ' : t.mgr_status === 'REJECTED' ? 'ไม่อนุมัติ' : '',
-      s?.staff_name || '', s?.work_owner === 'ITL' ? 'Direct ITL' : s ? 'ICO' : '', s?.inspection_detail || '', s?.action_detail || '',
-      s?.repair_cost ?? '', t.itl_name || '', t.itm_name || '',
-      d10(s?.finish_date), d10(t.closed_at), daysBetween(t.request_date, t.closed_at), closeLabel(s?.close_result),
-      sv?.score_total ?? '', files,
-    ];
-    return Object.fromEntries(CASE_TABLE_COLS.map((c, i) => [c.h, safeCell(v[i])]));
+    return [
+      t.ticket_no, dmyTH(t.request_date), t.requester_name, t.department, dmyTH(t.required_date),
+      t.issue_detail, s?.action_detail || '', s?.repair_cost ?? '', '',
+      dmyTH(s?.finish_date || t.closed_at), sv?.score_total ?? '',
+    ].map(safeCell);
   });
 }
 
