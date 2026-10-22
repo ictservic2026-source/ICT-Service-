@@ -69,7 +69,7 @@ select t.ok((:'created'::jsonb ->> 'ticket_no') = 'ICT-' || to_char(now() at tim
 select t.ok((:'created'::jsonb ->> 'requester_name') = 'สมชาย' and (:'created'::jsonb ->> 'requester_email') = 'req@x.co', 'input trimmed + email lowercased');
 select t.ok((:'created'::jsonb ->> 'approve_token') ~ '^[a-f0-9]{64}$' and (:'created'::jsonb ->> 'status') = 'OPEN', 'creator receives tokens, status OPEN');
 select (:'created'::jsonb ->> 'approve_token') as new_approve, (:'created'::jsonb ->> 'survey_token') as new_survey, (:'created'::jsonb ->> 'ticket_no') as new_no \gset
-select t.err($$select public.create_ticket('{"requester_name":"a","department":"b","location":"c","required_date":"2026-12-01","issue_detail":"d","requester_email":"same@x.co","manager_email":"SAME@x.co"}')$$, 'ต้องไม่ใช่อีเมลของผู้แจ้ง', 'manager email must differ from requester');
+select t.ok((public.create_ticket('{"requester_name":"a","department":"b","location":"c","required_date":"2026-12-01","issue_detail":"d","requester_email":"same@x.co","manager_email":"SAME@x.co"}') ->> 'manager_email') = 'same@x.co', 'manager email may equal requester email (004)');
 select t.err($$select public.create_ticket('{"requester_name":"a","department":"b","location":"c","required_date":"2026-12-01","issue_detail":"d","requester_email":"a@x.co","manager_email":"b@x.co","attachment_url":["https://evil.example/x.pdf"]}')$$, 'ลิงก์ไฟล์แนบไม่ถูกต้อง', 'external attachment URL rejected');
 select t.err($$select public.create_ticket('{"requester_name":"a","department":"b","location":"c","required_date":"not-a-date","issue_detail":"d","requester_email":"a@x.co","manager_email":"b@x.co"}')$$, 'วันที่ไม่ถูกต้อง', 'bad date rejected');
 select t.err($$select public.create_ticket('{"requester_name":"","department":"b"}')$$, 'กรุณากรอก', 'missing fields rejected');
@@ -97,7 +97,7 @@ select t.as_user(:'GONE');
 select t.ok((select count(*) from public.tickets) = 0, 'inactive staff sees nothing');
 
 select t.as_user(:'ICO');
-select t.ok((select count(*) from public.tickets) = 3, 'ICO sees all tickets');
+select t.ok((select count(*) from public.tickets) = 4, 'ICO sees all tickets (incl. same-email ticket from 004 test)');
 select t.ok((select count(*) from public.profiles) = 4, 'staff can read profiles');
 select t.err(format($$update public.tickets set approve_token = 'x' where ticket_no = %L$$, :'new_no'), 'token', 'staff cannot change tokens');
 select t.err(format($$update public.tickets set mgr_status = 'REJECTED' where ticket_no = %L$$, :'new_no'), 'หัวหน้างาน', 'staff cannot forge manager decision');
