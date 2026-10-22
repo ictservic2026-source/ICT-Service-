@@ -25,6 +25,7 @@ import { LogThread, type SendInput } from './LogThread';
 import { readReceipts, unreadNotifications } from '@/lib/notifications';
 import { SurveyBody } from './SurveyDetail';
 import { WorkStatusBar } from './WorkStatus';
+import { CaseDocButton } from '@/components/reports/CaseDocs';
 import { WorkForm, WorkView, toWorkInput, workMissing, workStateFrom, workSummary, type WorkFormState } from './WorkForm';
 
 type Tab = 'req' | 'work' | 'results' | 'log';
@@ -285,6 +286,8 @@ export function TicketModal({ ticketNo, portal, onClose, initialTab }: {
 
         <div className="pt-4">
           {tab === 'req' && (
+            <>
+            <div className="mb-3 flex justify-end"><CaseDocButton t={ticket} svc={svc} label="ดาวน์โหลดเอกสารรวม (ใบงาน + ไฟล์แนบ)" /></div>
             <div className="grid gap-x-8 gap-y-2 lg:grid-cols-2" data-testid="tab-req">
               <div>
                 <Section title="ข้อมูลผู้แจ้ง">
@@ -299,6 +302,7 @@ export function TicketModal({ ticketNo, portal, onClose, initialTab }: {
                   <Section title="ไฟล์แนบ"><Attachments images={ticket.issue_img_url} docs={ticket.attachment_url} /></Section>}
               </div>
             </div>
+            </>
           )}
 
           {tab === 'work' && (
