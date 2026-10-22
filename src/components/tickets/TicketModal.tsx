@@ -25,7 +25,7 @@ import { LogThread, type SendInput } from './LogThread';
 import { readReceipts, unreadNotifications } from '@/lib/notifications';
 import { SurveyBody } from './SurveyDetail';
 import { WorkStatusBar } from './WorkStatus';
-import { CaseDocButton } from '@/components/reports/CaseDocs';
+import { CaseDocButton } from '@/components/CaseDocs';
 import { WorkForm, WorkView, toWorkInput, workMissing, workStateFrom, workSummary, type WorkFormState } from './WorkForm';
 
 type Tab = 'req' | 'work' | 'results' | 'log';
