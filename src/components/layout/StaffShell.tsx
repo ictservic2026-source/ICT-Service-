@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import clsx from 'clsx';
-import { BarChart3, FileSpreadsheet, FlaskConical, LogOut, Menu, ShieldCheck, UserCog, Wrench, X } from 'lucide-react';
+import { BarChart3, BookOpen, FileSpreadsheet, FlaskConical, LogOut, Menu, ShieldCheck, UserCog, Wrench, X } from 'lucide-react';
 import type { Role } from '@/types';
 import { ROLE_LABEL, ROLE_PORTAL } from '@/lib/constants';
 import { useServices, useSession } from '@/hooks';
@@ -20,6 +20,7 @@ const NAV: NavItem[] = [
   { href: '/itl', label: 'งาน ITL (ตรวจสอบ)', icon: <ShieldCheck />, roles: ['ITL', 'ITM'] },
   { href: '/itm', label: 'IT Manager (อนุมัติ)', icon: <UserCog />, roles: ['ITM'] },
   { href: '/dashboard', label: 'Dashboard', icon: <BarChart3 />, roles: ['ICO', 'ITL', 'ITM'] },
+  { href: '/logbook', label: 'สมุดงาน', icon: <BookOpen />, roles: ['ICO', 'ITL', 'ITM'] },
   { href: '/reports', label: 'รายงาน / Export', icon: <FileSpreadsheet />, roles: ['ICO', 'ITL', 'ITM'] },
   { href: '/demo', label: 'ศูนย์ทดสอบ (Demo)', icon: <FlaskConical />, roles: ['ICO', 'ITL', 'ITM'], mockOnly: true },
 ];
