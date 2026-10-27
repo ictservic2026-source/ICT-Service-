@@ -135,6 +135,26 @@ export default function DashboardPage() {
             </Card>
           </div>
 
+          {/* ───── Category / Priority / Dept ───── */}
+          <div className="grid gap-4 lg:grid-cols-3">
+            <Card><CardHeader title="ตามประเภทงาน" subtitle="คลิกเพื่อกรองรายการงานด้านล่าง" /><div className="p-5"><HBars rows={v.cat.rows} max={v.cat.max} onPick={(x) => set({ cat: x })} active={f.cat} /></div></Card>
+            <Card><CardHeader title="ตามความเร่งด่วน" subtitle="คลิกเพื่อกรองรายการงานด้านล่าง" /><div className="grid grid-cols-2 gap-3 p-5" data-testid="pri-tiles">
+              {v.pri.rows.filter((r) => r.value).map((r) => {
+                const total = v.pri.rows.filter((x) => x.value).reduce((n, x) => n + x.n, 0) || 1;
+                const on = f.priority === r.value, urgent = r.value === 'URGENT';
+                return (
+                  <button key={r.value} type="button" aria-pressed={on} onClick={() => set({ priority: on ? '' : (r.value as DashFilter['priority']) })}
+                    className={clsx('rounded-xl border p-4 text-left transition hover:border-brand', on ? 'border-brand ring-2 ring-brand/20' : 'border-line', urgent ? 'bg-[var(--err-bg)]' : 'bg-surface-2')}>
+                    <span className={clsx('text-sm font-medium', urgent ? 'text-[var(--err-fg)]' : 'text-sub')}>{r.label}</span>
+                    <span className={clsx('num mt-1 block text-3xl font-bold', urgent ? 'text-err' : 'text-ink')}>{r.n}</span>
+                    <span className="text-xs text-sub">{Math.round((r.n / total) * 100)}% ของงานที่ระบุ</span>
+                  </button>
+                );
+              })}
+            </div></Card>
+            <Card><CardHeader title="ตามแผนก" subtitle="คลิกเพื่อกรองรายการงานด้านล่าง" /><div className="max-h-[320px] overflow-y-auto p-5"><HBars rows={v.dept.rows.map((r) => ({ label: r.k, n: r.n }))} max={v.dept.max} color="var(--navy-2)" onPick={(x) => set({ dept: x })} active={f.dept} /></div></Card>
+          </div>
+
           {/* ───── รายการงาน ───── */}
           <Card id="queue" className="scroll-mt-20">
             <CardHeader title="รายการงาน" subtitle={`${v.rows.length} รายการ · ${f.status ? (f.status in STATUS_FILTER_LABEL ? STATUS_FILTER_LABEL[f.status as keyof typeof STATUS_FILTER_LABEL] : V2_GROUPS.find((g) => g.key === f.status)!.label) : 'ทุกสถานะ'} · คลิกแถวเพื่อดูรายละเอียด`}
@@ -167,26 +187,6 @@ export default function DashboardPage() {
                 ) : <div className="mt-4 space-y-2.5">{v.sat.q.map((q) => <div key={q.label} className="text-xs"><div className="mb-1 flex justify-between"><span>{q.label}</span><b className="num">{q.avg.toFixed(1)}</b></div><div className="h-2 rounded-full bg-surface-3"><div className="h-full rounded-full" style={{ width: `${q.pct}%`, background: q.pct >= 96 ? 'var(--ok)' : q.pct >= 75 ? 'var(--warn)' : 'var(--err)' }} /></div></div>)}</div>}
               </div>
             </Card>
-          </div>
-
-          {/* ───── Category / Priority / Dept ───── */}
-          <div className="grid gap-4 lg:grid-cols-3">
-            <Card><CardHeader title="ตามประเภทงาน" subtitle="คลิกเพื่อกรอง" /><div className="p-5"><HBars rows={v.cat.rows} max={v.cat.max} onPick={(x) => set({ cat: x })} active={f.cat} /></div></Card>
-            <Card><CardHeader title="ตามความเร่งด่วน" subtitle="คลิกเพื่อกรอง" /><div className="grid grid-cols-2 gap-3 p-5" data-testid="pri-tiles">
-              {v.pri.rows.filter((r) => r.value).map((r) => {
-                const total = v.pri.rows.filter((x) => x.value).reduce((n, x) => n + x.n, 0) || 1;
-                const on = f.priority === r.value, urgent = r.value === 'URGENT';
-                return (
-                  <button key={r.value} type="button" aria-pressed={on} onClick={() => set({ priority: on ? '' : (r.value as DashFilter['priority']) })}
-                    className={clsx('rounded-xl border p-4 text-left transition hover:border-brand', on ? 'border-brand ring-2 ring-brand/20' : 'border-line', urgent ? 'bg-[var(--err-bg)]' : 'bg-surface-2')}>
-                    <span className={clsx('text-sm font-medium', urgent ? 'text-[var(--err-fg)]' : 'text-sub')}>{r.label}</span>
-                    <span className={clsx('num mt-1 block text-3xl font-bold', urgent ? 'text-err' : 'text-ink')}>{r.n}</span>
-                    <span className="text-xs text-sub">{Math.round((r.n / total) * 100)}% ของงานที่ระบุ</span>
-                  </button>
-                );
-              })}
-            </div></Card>
-            <Card><CardHeader title="ตามแผนก" subtitle="คลิกเพื่อกรอง" /><div className="max-h-[320px] overflow-y-auto p-5"><HBars rows={v.dept.rows.map((r) => ({ label: r.k, n: r.n }))} max={v.dept.max} color="var(--navy-2)" onPick={(x) => set({ dept: x })} active={f.dept} /></div></Card>
           </div>
 
           {/* ───── 12 months ───── */}
