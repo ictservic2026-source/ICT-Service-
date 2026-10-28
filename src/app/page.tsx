@@ -15,6 +15,8 @@ const STEPS = [
 export default function HomePage() {
   return (
     <PublicShell
+      fit
+      wide
       right={
         <>
           <Link href="/request" className="hidden h-9 items-center rounded-lg px-3 text-sm font-medium text-brand-d hover:bg-brand-pale sm:inline-flex">
@@ -27,26 +29,26 @@ export default function HomePage() {
         </>
       }
     >
-      <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-8 sm:px-8 sm:py-12" data-testid="landing">
+      <div className="mx-auto my-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-8 sm:py-10 lg:gap-4 lg:py-4" data-testid="landing">
         {/* ───── Hero ───── */}
         <section>
           <span className="tone-blue inline-flex rounded-full px-3 py-0.5 text-xs font-semibold">แผนก ICT · ตอบกลับภายใน 1 วันทำการ</span>
-          <h1 className="mt-4 text-[26px] leading-tight font-bold text-ink sm:text-[34px]">
+          <h1 className="mt-3 text-[26px] leading-tight font-bold text-ink sm:text-[34px] lg:mt-2 lg:text-[30px]">
             มีปัญหาเรื่องคอมพิวเตอร์ โปรแกรม หรือเครือข่าย
             <br className="hidden sm:block" /> แจ้งทีม ICT ได้ที่นี่
           </h1>
-          <p className="mt-3 max-w-2xl text-base text-sub">
+          <p className="mt-2.5 max-w-3xl text-base text-sub lg:mt-2">
             กรอกแบบฟอร์ม 2 ขั้นตอน ระบบจะส่งคำขอให้หัวหน้างานอนุมัติ แล้วทีม ICT จะรับงานต่อ
             คุณติดตามสถานะได้ตลอดด้วยเลขที่งานและอีเมลของคุณ
           </p>
         </section>
 
-        {/* ───── ทางเลือกหลัก ───── */}
-        <div className="grid gap-4 sm:grid-cols-2">
+        {/* ───── ทางเลือกหลัก + ขั้นตอน (จอคอม = 3 คอลัมน์ในแถวเดียว) ───── */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1.15fr_1fr]">
           <Link
             href="/request"
             data-testid="landing-request"
-            className="group flex flex-col gap-2.5 rounded-xl border border-line bg-surface p-6 shadow-card transition hover:border-brand focus-visible:border-brand"
+            className="group flex flex-col gap-2.5 rounded-xl border border-line bg-surface p-6 shadow-card transition hover:border-brand focus-visible:border-brand lg:p-5"
           >
             <span className="flex size-11 items-center justify-center rounded-lg bg-brand text-on-brand"><Plus className="size-5" aria-hidden /></span>
             <span className="text-lg font-bold text-ink">แจ้งปัญหาใหม่</span>
@@ -56,18 +58,17 @@ export default function HomePage() {
             </span>
           </Link>
 
-          <div className="flex flex-col gap-2.5 rounded-xl border border-line bg-surface p-6 shadow-card" data-testid="landing-track">
+          <div className="flex flex-col gap-2.5 rounded-xl border border-line bg-surface p-6 shadow-card lg:p-5" data-testid="landing-track">
             <span className="flex size-11 items-center justify-center rounded-lg bg-brand-pale text-brand-d"><Search className="size-5" aria-hidden /></span>
             <span className="text-lg font-bold text-ink">ติดตามสถานะงาน</span>
             <span className="text-sub">กรอกเลขที่งานคู่กับอีเมลที่ใช้ตอนแจ้ง หรือเปิดลิงก์ติดตามที่ได้หลังส่งคำขอ</span>
             <TrackLookup />
           </div>
-        </div>
 
         {/* ───── ขั้นตอน ───── */}
-        <section className="rounded-xl border border-line bg-surface p-5 shadow-card sm:p-6" aria-labelledby="how-h">
+        <section className="rounded-xl border border-line bg-surface p-5 shadow-card sm:col-span-2 sm:p-6 lg:col-span-1 lg:p-5" aria-labelledby="how-h">
           <h2 id="how-h" className="mb-4 text-base font-bold text-ink">ขั้นตอนหลังแจ้งปัญหา</h2>
-          <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
             {STEPS.map((s, i) => (
               <li key={s.title} className="flex gap-3">
                 <span className="num flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-pale text-sm font-bold text-brand-d">{i + 1}</span>
@@ -79,6 +80,7 @@ export default function HomePage() {
             ))}
           </ol>
         </section>
+        </div>
       </div>
     </PublicShell>
   );
