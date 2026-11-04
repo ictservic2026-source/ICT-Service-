@@ -8,6 +8,7 @@
  */
 import type { Survey, TicketStatus } from '@/types';
 import type { DashData, DashTicket } from './dashboard';
+import { isSelfReported } from './dashboard';
 
 export type StationKey = 'NEW' | 'ICO_WORK' | 'ITL_WAIT' | 'ITM_WAIT' | 'ICO_FINAL';
 
@@ -141,7 +142,7 @@ export function summarize({ rows, month, dept, today }: LogbookInput) {
   const closedThisMonth = scoped.filter((r) => r.done && r.closed.slice(0, 7) === month);
   const openAll = scoped.filter((r) => r.open);
   const urgent = openAll.filter((r) => r.t.priority === 'URGENT');
-  const costRows = cur.filter((r) => r.cost != null);
+  const costRows = cur.filter((r) => (r.cost ?? 0) > 0); // ยอด 0 = ไม่มีค่าใช้จ่าย
   const cost = costRows.reduce((a, r) => a + (r.cost ?? 0), 0);
   const scored = cur.filter((r) => r.score != null);
   const avg = scored.length ? scored.reduce((a, r) => a + (r.score ?? 0), 0) / scored.length : null;
@@ -165,7 +166,7 @@ export function summarize({ rows, month, dept, today }: LogbookInput) {
   ].filter(Boolean).join(' ') + ` · ค่าใช้จ่ายของงานเดือนนี้รวม ${fmtB(cost)}`;
 
   const diff = cur.length - prev.length;
-  const waitSurvey = cur.filter((r) => r.done && r.score == null).length;
+  const waitSurvey = cur.filter((r) => r.done && r.score == null && !isSelfReported(r.t)).length;
 
   return {
     cur, prev, openAll, urgent, closedThisMonth, cost, costRows, scored, avg, latestAvg, latestMonthScored,

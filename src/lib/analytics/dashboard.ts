@@ -230,12 +230,13 @@ export function queueRows(c: Ctx, st: StatusFilter): DashTicket[] {
   return c.data.filter((t) => matchStatus(c.d, t, st)).sort((a, b) => String(b.request_date || '').localeCompare(String(a.request_date || '')));
 }
 
-export const costDateOf = (r: TicketService) => r.finish_date || r.received_date || null;
+/** ค่าใช้จ่ายนับตามเดือนที่แจ้ง (request_date) เหมือนตัวเลขอื่นบน Dashboard และสมุดงาน — ยอดจึงตรงกันทุกหน้า */
+export const costDateOf = (d: DashData, r: TicketService) => d.ticketMap.get(r.ticket_no)?.request_date || null;
 
 export function costRows(c: Ctx): TicketService[] {
   return c.d.services.filter((r) => {
-    if (r.repair_cost == null || !costDateOf(r)) return false;
-    if (c.hasRange && !inRange(costDateOf(r), c.range)) return false;
+    if (!(Number(r.repair_cost) > 0) || !costDateOf(c.d, r)) return false; // ยอด 0 / ว่าง = ไม่มีค่าใช้จ่าย
+    if (c.hasRange && !inRange(costDateOf(c.d, r), c.range)) return false;
     const t = c.d.ticketMap.get(r.ticket_no);
     if (c.f.dept && t?.department !== c.f.dept) return false;
     if (c.f.cat && catKey(r.job_category) !== catKey(c.f.cat)) return false;
@@ -309,8 +310,11 @@ export function monthRows(c: Ctx, now = new Date()): MonthRow[] {
   }
   return out;
 }
+/** งานที่ฝ่าย ICT แจ้งเอง — ไม่ต้องประเมินตัวเอง จึงไม่นับเป็น "รอประเมิน" (สถานะงานไม่ขึ้นกับแบบประเมินอยู่แล้ว) */
+export const isSelfReported = (t: Pick<DashTicket, 'department'>) => (t.department || '').trim().toUpperCase() === 'ICT';
+
 export function svTrack(c: Ctx) {
-  const done = c.data.filter((t) => t.status === 'DONE');
+  const done = c.data.filter((t) => t.status === 'DONE' && (c.d.survey.has(t.ticket_no) || !isSelfReported(t)));
   return { pend: done.filter((t) => !c.d.survey.has(t.ticket_no)), evaluated: done.filter((t) => c.d.survey.has(t.ticket_no)) };
 }
 export function departmentsOf(d: DashData): string[] {
