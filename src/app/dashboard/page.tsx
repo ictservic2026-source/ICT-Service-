@@ -218,18 +218,43 @@ export default function DashboardPage() {
   );
 }
 
+/** จำนวนแถวที่แสดงในรายการงาน (0 = ทั้งหมด) — จำไว้ในเบราว์เซอร์ */
+const QUEUE_LIMITS = [10, 25, 0] as const;
+type QueueLimit = (typeof QUEUE_LIMITS)[number];
+const QUEUE_LIMIT_KEY = 'dash.queueLimit';
+function readQueueLimit(): QueueLimit {
+  try { const n = Number(window.localStorage.getItem(QUEUE_LIMIT_KEY)); return (QUEUE_LIMITS as readonly number[]).includes(n) && window.localStorage.getItem(QUEUE_LIMIT_KEY) !== null ? (n as QueueLimit) : 10; } catch { return 10; }
+}
+
 function QueueTable({ rows, onOpen }: { rows: ReturnType<typeof queueRows>; onOpen: (no: string) => void }) {
+  const [limit, setLimitState] = useState<QueueLimit>(() => (typeof window === 'undefined' ? 10 : readQueueLimit()));
+  const setLimit = (n: QueueLimit) => { setLimitState(n); try { window.localStorage.setItem(QUEUE_LIMIT_KEY, String(n)); } catch { /* ignore */ } };
   if (!rows.length) return <EmptyState icon="📭" title="ไม่มีรายการตามตัวกรอง" hint="ลองเปลี่ยนช่วงเวลาหรือล้างตัวกรอง" />;
   const cat = (c: string | null) => (c === 'Other' ? 'อื่นๆ' : c || '—');
+  const all = limit === 0;
+  const shown = all ? rows.slice(0, 200) : rows.slice(0, limit);
   return (
-    <div className="overflow-x-auto">
+    <div>
+      <div className="no-print flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2 text-xs text-sub">
+        <span>แสดง <b className="num text-ink">{shown.length}</b> จาก <b className="num text-ink">{rows.length}</b> รายการ</span>
+        <div className="flex items-center gap-1" role="group" aria-label="จำนวนรายการที่แสดง" data-testid="queue-limit">
+          <span className="mr-1">แสดง</span>
+          {QUEUE_LIMITS.map((n) => (
+            <button key={n} type="button" aria-pressed={limit === n} onClick={() => setLimit(n)}
+              className={clsx('rounded-lg border px-2.5 py-1 transition', limit === n ? 'border-brand bg-brand-pale font-semibold text-brand-d' : 'border-line hover:border-brand')}>
+              {n === 0 ? 'ทั้งหมด' : n}
+            </button>
+          ))}
+        </div>
+      </div>
+    <div className={clsx('overflow-x-auto', all && 'max-h-[480px] overflow-y-auto print:max-h-none print:overflow-visible')}>
       <table className="w-full min-w-[860px] text-sm" data-testid="queue-table">
-        <thead className="bg-surface-2 text-left text-xs text-sub"><tr>
+        <thead className={clsx('bg-surface-2 text-left text-xs text-sub', all && 'sticky top-0 z-10')}><tr>
           <th className="px-4 py-2 font-medium">เลขที่งาน</th><th className="px-2 py-2 font-medium">ผู้แจ้ง / แผนก</th><th className="px-2 py-2 font-medium">ประเภทงาน</th>
           <th className="px-2 py-2 font-medium">ความเร่งด่วน</th><th className="px-2 py-2 font-medium">สถานะ</th><th className="px-2 py-2 font-medium">ผู้รับผิดชอบ</th><th className="px-4 py-2 text-right font-medium">วันที่แจ้ง</th>
         </tr></thead>
         <tbody>
-          {rows.slice(0, 200).map((t) => (
+          {shown.map((t) => (
             <tr key={t.ticket_no} data-no={t.ticket_no} tabIndex={0} onClick={() => onOpen(t.ticket_no)} onKeyDown={(e) => e.key === 'Enter' && onOpen(t.ticket_no)} className="cursor-pointer border-t border-line/70 hover:bg-brand-pale/60 focus:bg-brand-pale/60 focus:outline-none">
               <td className="num px-4 py-2.5 font-semibold whitespace-nowrap text-brand-d">{t.ticket_no}</td>
               <td className="px-2 py-2.5"><div className="font-medium">{t.requester_name}</div><div className="text-xs text-mute">{t.department}</div></td>
@@ -241,7 +266,13 @@ function QueueTable({ rows, onOpen }: { rows: ReturnType<typeof queueRows>; onOp
             </tr>))}
         </tbody>
       </table>
-      {rows.length > 200 && <p className="border-t border-line px-4 py-2 text-center text-xs text-mute">แสดง 200 รายการแรกจาก {rows.length} — ใช้ตัวกรองเพื่อจำกัดช่วง</p>}
+    </div>
+      {all && rows.length > 200 && <p className="border-t border-line px-4 py-2 text-center text-xs text-mute">แสดง 200 รายการแรกจาก {rows.length} — ใช้ตัวกรองเพื่อจำกัดช่วง</p>}
+      {!all && rows.length > limit && (
+        <button type="button" onClick={() => setLimit(0)} className="no-print block w-full border-t border-line px-4 py-2 text-center text-xs font-medium text-brand-d hover:bg-brand-pale/60" data-testid="queue-show-all">
+          ดูทั้งหมด {rows.length} รายการ ↓
+        </button>
+      )}
     </div>
   );
 }
